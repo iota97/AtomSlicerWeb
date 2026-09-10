@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="Personal website of Giovanni Cocco">
+		<meta name="keywords" content="atomslicer, slicer, 5-axis, non planar, 3D printing, research">
+		<meta name="author" content="Giovanni Cocco">
+		<title>AtomSlicer</title>
+		<link rel="stylesheet" href="style.css">
+	</head>
+	<body>
+		<div id="errorBox" style="display: none;">
+			<strong>Fatal Error!</strong>
+			<pre id="errorMessage"></pre>
+			<p id="errorHint">
+				Most errors are caused by running out of memory. Reduce the model size and try again.
+			</p>
+		</div>
+
+		<main id="mainLayout">
+			<div id="inputBox">
+				<div id="perLayerSettings" class="settings" style="display: none;">
+					<div id="titleRow">
+						<h1>AtomSlicer</h1>
+						<a href="https://xavierchermain.github.io/publications/atom-slicer" target="_blank" rel="noopener noreferrer" class="projectLink">Project Page ↗</a>
+					</div>
+
+					<h2>Layer Settings</h2>
+
+					<label for="constDirection">Zigzag Direction (&deg;)</label>
+					<input type="number" id="constDirection" class="parameter" min="0" max="180" step="1" value="0.0">
+
+					<label for="imageLayerCheckbox">Load Directions from Image</label>
+					<input type="checkbox" id="imageLayerCheckbox" class="parameter">
+
+					<label for="downloadScreenshot" class="layerImageClass" style="display: none;">Layer Reference</label>
+					<button id="downloadScreenshot" class="layerImageClass" style="display: none;" onclick="downloadScreenShot()">Download Reference Image</button>
+
+					<label for="layerImage" class="layerImageClass" style="display: none;">Upload Directions</label>
+					<input type="file" id="layerImage" class="layerImageClass" style="display: none;" accept=".png,.jpg,.jpeg" onchange="onNewImage()">
+
+					<p class="layerImageClass" style="display: none;"> 
+						You may upload an image where <strong>black represents 0&deg;</strong> and <strong>white represents 180&deg;</strong>. 
+						Angles are measured counterclockwise from the horizontal axis. 
+						For a spatial reference, you may use the <strong>Download Reference Image</strong> button above. 
+					</p>
+				</div>
+
+				<div id="settings" class="settings">
+					<div id="titleRow">
+						<h1>AtomSlicer</h1>
+						<a href="https://xavierchermain.github.io/publications/atom-slicer" target="_blank" rel="noopener noreferrer" class="projectLink">Project Page ↗</a>
+					</div>
+
+					<h2>Slicer Settings</h2>
+
+					<label for="inputstl">Model STL</label>
+					<input type="file" id="inputstl" accept=".stl" onchange="onNewSTL()">
+
+					<label for="nozzleWidth">Nozzle Diameter (mm)</label>
+					<input type="number" id="nozzleWidth" class="parameter" min="0" step="0.1" value="0.9">
+
+					<label for="infillType">Infill Type</label>
+					<select id="infillType" class="parameter">
+						<option value="0">Full</option>
+						<option value="1">Hollow</option>
+						<option value="2">Grid</option>
+						<option value="3">Cubic</option>
+						<option value="4" selected>Gyroid</option>
+					</select>
+
+					<label for="zigzagOffset">Zigzag Direction Offset</label>
+					<input type="number" id="zigzagOffset" class="parameter" min="0" step="1" value="0">
+
+					<label for="holeClosing">Perimeter Hole Closing</label>
+					<input type="checkbox" id="holeClosing" class="parameter" checked>
+
+					<label for="layerFields">Custom Toolpath Directions</label>
+					<input type="checkbox" id="layerFields" class="parameter">
+
+					<h2>Optimization Parameters</h2>
+
+					<label for="toolOrientation">Tool Orientation</label>
+					<select id="toolOrientation" class="parameter" onchange="updateToolOrientation()">
+						<option value="0" selected>Conformal (smoothly interpolated)</option>
+						<option value="1">Conformal (covers only, planar otherwise)</option>
+						<option value="2">Support-Free</option>
+						<option value="3">Closest Conformal Surface</option>
+					</select>
+
+					<label for="topAngle" id="topAngleLabel">Max Top Surface Tilt (&deg;)</label>
+					<input type="number" id="topAngle" class="parameter" min="0" step="1.0" value="30.0">
+
+					<label for="bottomAngle" id="bottomAngleLabel">Max Bottom Surface Tilt (&deg;)</label>
+					<input type="number" id="bottomAngle" class="parameter" min="0" step="1.0" value="2.0">
+
+					<label for="numberOfCover" id="numberOfCoverLabel" hidden>Number of Conformal Covers</label>
+					<input type="number" id="numberOfCover" class="parameter" min="0" step="1" value="4" hidden>
+
+					<h2>Collision Avoidance</h2>
+
+					<label for="collisionAngle">Collision Cone Angle (&deg;)</label>
+					<input type="number" id="collisionAngle" class="parameter" min="0" step="1" value="95.0">
+
+					<label for="upCollisionCheck">3-Axis Collision Check</label>
+					<input type="checkbox" id="upCollisionCheck" class="parameter">
+				</div>
+			</div>
+
+			<div id="viewerBox">
+				<canvas id="canvas"></canvas>
+
+				<div id="viewerControls" style="display: none;">
+					<div class="toggleControl">
+						<label for="viewMode">View:</label>
+						<select id="viewMode">
+							<option value="model">Model</option>
+							<option value="layers">Layers</option>
+							<option value="gcode">GCode</option>
+						</select>
+					</div>
+					<label class="sliderControl">
+						<span>Waypoints</span>
+						<input type="range" id="toolpathSlider" min="0" max="100" value="0" step="1">
+						<span id="toolpathValue">0</span>
+					</label>
+					<label class="sliderControl">
+						<span>Layers</span>
+						<input type="range" id="layerSlider" min="1" max="100" value="0" step="1">
+						<span id="layerValue">0</span>
+					</label>
+				</div>
+
+				<div id="sliceBox">
+					<button id="resumeButton" onclick="_resume()" style="display: none;">Continue</button>
+					<button id="sliceButton" onclick="slice()">Slice</button>
+					<span id="status"></span>
+				</div>
+
+				<div id="warning" style="display: none;">
+					<strong>Warning:</strong> Most printer profiles are untested. Incorrect toolpaths may damage your printer or cause print failure. Use at your own risk and always supervise the printer while printing.
+				</div>
+
+				<div id="outputBox" style="display: none;">
+					
+					<label for="profile">Profile</label>
+					<select id="profile">
+						<option value="ratrig5">Custom Rat Rig 5-Axis</option>
+						<option value="ratrig3">Custom Rat Rig 3-Axis</option>
+						<option value="meshply">Polyline PLY</option>
+					</select>
+
+					<input type="button" id="savePLY" value="Download GCode" onclick="saveProfile()">
+				</div>
+			</div>
+		</main>
+
+		<script src=app.js></script>
+		<script src=slicer.js></script>
+		<script src=gl.js></script>
+	</body>
+</html>
