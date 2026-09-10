@@ -1,0 +1,1013 @@
+* {
+	box-sizing: border-box;
+}
+
+:root {
+	font-size: 100%;
+	color-scheme: dark;
+}
+
+body {
+	min-height: 100vh;
+	margin: 0;
+	padding: 2rem 1rem;
+
+	font-family:
+		system-ui,
+		-apple-system,
+		BlinkMacSystemFont,
+		"Segoe UI",
+		sans-serif;
+
+	background: #111318;
+	color: #e5e7eb;
+}
+
+
+/* ==============================
+   Main layout
+   ============================== */
+
+.settings p.layerImageClass {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+#mainLayout {
+	width: min(100%, 90rem);
+	height: calc(100vh - 4rem);
+
+	margin: 0 auto;
+
+	display: grid;
+	grid-template-columns: 40rem minmax(0, 1fr);
+
+	gap: 2rem;
+
+	align-items: stretch;
+}
+
+
+/* ==============================
+   Slicer settings
+   ============================== */
+
+#inputBox {
+	min-width: 0;
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.settings {
+	min-width: 0;
+	min-height: 0;
+
+	overflow-y: auto;
+
+	display: grid;
+	grid-template-columns:
+		minmax(0, 1fr)
+		minmax(0, 1.5fr);
+
+	gap: 0.875rem 1.25rem;
+
+	align-content: start;
+	align-items: center;
+
+	padding: clamp(1rem, 3vw, 1.5rem);
+
+	background: #1b1e24;
+	border: 1px solid #30343c;
+	border-radius: 0.75rem;
+
+	height: 100%;
+
+	box-shadow:
+		0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+}
+
+/* ==============================
+   Disabled inputs
+   ============================== */
+
+.settings.disabled > *:not(h1) {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+
+/* ==============================
+   Title
+   ============================== */
+   
+#titleRow {
+    grid-column: 1 / -1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+
+    margin: 0 0 1rem;
+}
+
+#titleRow h1 {
+    margin: 0;
+
+    font-size: clamp(1.6rem, 4vw, 2rem);
+    font-weight: 750;
+    letter-spacing: -0.04em;
+
+    color: #f9fafb;
+}
+
+#titleRow .projectLink {
+    position: relative;
+    top: 0.12rem;
+
+    color: #818cf8;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: normal;
+    text-decoration: none;
+    white-space: nowrap;
+
+    transition: color 0.15s ease;
+}
+
+#titleRow .projectLink:hover {
+    color: #a5b4fc;
+    text-decoration: underline;
+}
+
+@media (max-width: 40rem) {
+    #titleRow {
+        flex-direction: column;
+        gap: 0.5rem;
+        margin-bottom: 1rem;
+    }
+
+    #titleRow .projectLink {
+        top: 0;
+        font-size: 0.9rem;
+    }
+}
+
+/* ==============================
+   Section headings
+   ============================== */
+
+.settings h2 {
+	grid-column: 1 / -1;
+
+	margin: 1.5rem 0 0.5rem;
+
+	font-size: 1.125rem;
+	font-weight: 650;
+
+	color: #f3f4f6;
+}
+
+.settings h2:first-of-type {
+	margin-top: 0;
+}
+
+.settings label {
+	font-size: 0.875rem;
+	font-weight: 600;
+
+	color: #cbd5e1;
+}
+
+
+/* ==============================
+   File input
+   ============================== */
+
+.settings #inputstl {
+	width: 100%;
+	min-width: 0;
+
+	color: #d1d5db;
+
+	font: inherit;
+	font-size: 0.875rem;
+}
+
+.settings #inputstl::file-selector-button {
+	margin-right: 0.625rem;
+
+	padding: 0.6rem 0.875rem;
+
+	border: 1px solid #454b55;
+	border-radius: 0.45rem;
+
+	background: #292d35;
+	color: #e5e7eb;
+
+	font: inherit;
+	font-weight: 600;
+
+	cursor: pointer;
+
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.settings #inputstl::file-selector-button:hover {
+	background: #343943;
+	border-color: #5b6470;
+}
+
+.settings #layerImage {
+	width: 100%;
+	min-width: 0;
+
+	color: #d1d5db;
+
+	font: inherit;
+	font-size: 0.875rem;
+}
+
+.settings #layerImage::file-selector-button {
+	margin-right: 0.625rem;
+
+	padding: 0.6rem 0.875rem;
+
+	border: 1px solid #454b55;
+	border-radius: 0.45rem;
+
+	background: #292d35;
+	color: #e5e7eb;
+
+	font: inherit;
+	font-weight: 600;
+
+	cursor: pointer;
+
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.settings #layerImage::file-selector-button:hover {
+	background: #343943;
+	border-color: #5b6470;
+}
+
+
+#downloadScreenshot {    
+	margin-right: 0.625rem;
+
+	padding: 0.6rem 0.875rem;
+
+	border: 1px solid #454b55;
+	border-radius: 0.45rem;
+
+	background: #292d35;
+	color: #e5e7eb;
+
+	font: inherit;
+	font-weight: 600;
+    font-size: 0.875rem;
+
+	cursor: pointer;
+
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+
+#downloadScreenshot:hover {
+	background: #343943;
+	border-color: #5b6470;
+}
+
+
+
+/* ==============================
+   Number and select inputs
+   ============================== */
+
+.settings .parameter:not([type="checkbox"]) {
+	width: 100%;
+	min-width: 0;
+
+	padding: 0.65rem 0.75rem;
+
+	border: 1px solid #454b55;
+	border-radius: 0.45rem;
+
+	background: #15171c;
+	color: #f3f4f6;
+
+	font: inherit;
+	font-size: 0.95rem;
+
+	outline: none;
+
+	transition:
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+
+.settings .parameter:not([type="checkbox"]):focus {
+	border-color: #818cf8;
+
+	box-shadow:
+		0 0 0 0.2rem rgba(129, 140, 248, 0.15);
+}
+
+
+/* ==============================
+   Checkbox
+   ============================== */
+
+.settings input[type="checkbox"] {
+	width: 1.15rem;
+	height: 1.15rem;
+
+	margin: 0;
+
+	justify-self: start;
+
+	accent-color: #6366f1;
+
+	cursor: pointer;
+}
+
+.settings input[type="checkbox"]:focus-visible {
+	outline: none;
+
+	box-shadow:
+		0 0 0 0.2rem rgba(129, 140, 248, 0.15);
+}
+
+
+/* ==============================
+   Viewer
+   ============================== */
+
+#viewerBox {
+	min-width: 0;
+	min-height: 0;
+
+	height: 100%;
+
+	display: flex;
+	flex-direction: column;
+
+	padding: 1rem;
+
+	background: #1b1e24;
+	border: 1px solid #30343c;
+	border-radius: 0.75rem;
+
+	box-shadow:
+		0 0.5rem 1.5rem rgba(0, 0, 0, 0.25);
+}
+
+
+/* ==============================
+   Canvas
+   ============================== */
+
+#canvas {
+	display: block;
+
+	width: 100%;
+	flex: 1;
+
+	min-height: 0;
+
+	border-radius: 0.5rem;
+
+	background: #111318;
+	border: 1px solid #30343c;
+}
+
+
+/* ==============================
+   Slice controls
+   ============================== */
+
+#sliceBox {
+	display: flex;
+
+	align-items: center;
+
+	gap: 1rem;
+
+	margin-top: 1rem;
+}
+
+#sliceBox button {
+    width: calc((100% - 1.25rem) / 3);
+	flex: none;
+	padding: 0.75rem 2rem;
+
+	border: 1px solid #6366f1;
+	border-radius: 0.45rem;
+
+	background: #4f46e5;
+	color: #ffffff;
+
+	font: inherit;
+	font-weight: 650;
+	font-size: 0.95rem;
+
+	cursor: pointer;
+
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		transform 0.1s ease;
+}
+
+#sliceBox button:hover:not(:disabled) {
+	background: #6366f1;
+	border-color: #818cf8;
+}
+
+#sliceBox button:active:not(:disabled) {
+	transform: translateY(0.05rem);
+}
+
+#sliceBox #status {
+	flex: 1;
+	min-width: 0;
+
+	font-size: 1rem;
+	font-weight: 500;
+	color: #aeb7c4;
+
+	overflow-wrap: anywhere;
+}
+
+
+/* ==============================
+   Output buttons
+   ============================== */
+
+#outputBox {
+	display: flex;
+
+	gap: 0.625rem;
+
+	margin-top: 0.75rem;
+}
+
+#outputBox input[type="button"] {
+	flex: 1 1 0;
+
+	min-width: 0;
+
+	padding: 0.7rem 1rem;
+
+	border: 1px solid #4b5563;
+	border-radius: 0.45rem;
+
+	background: #292d35;
+	color: #f3f4f6;
+
+	font: inherit;
+	font-size: 0.8125rem;
+	font-weight: 600;
+
+	cursor: pointer;
+
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		transform 0.1s ease;
+}
+
+#outputBox input[type="button"]:hover:not(:disabled) {
+	background: #343943;
+	border-color: #687280;
+}
+
+#outputBox input[type="button"]:active:not(:disabled) {
+	transform: translateY(0.05rem);
+}
+
+
+/* ==============================
+   Disabled controls
+   ============================== */
+
+#sliceBox #sliceButton:disabled,
+#outputBox input[type="button"]:disabled {
+	background: #202329;
+	color: #9ca3af;
+
+	border-color: #3b4048;
+
+	cursor: not-allowed;
+	opacity: 1;
+}
+
+
+/* ==============================
+   Scrollbar
+   ============================== */
+
+#inputBox {
+	scrollbar-width: thin;
+	scrollbar-color: #454b55 transparent;
+}
+
+#inputBox::-webkit-scrollbar {
+	width: 0.5rem;
+}
+
+#inputBox::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+#inputBox::-webkit-scrollbar-thumb {
+	background: #454b55;
+	border-radius: 1rem;
+}
+
+#inputBox::-webkit-scrollbar-thumb:hover {
+	background: #5b6470;
+}
+
+
+/* ==============================
+   Mobile
+   ============================== */
+
+@media (max-width: 60rem) {
+	body {
+		padding-block: 2rem;
+	}
+
+	#mainLayout {
+		height: auto;
+
+		grid-template-columns: 1fr;
+
+		gap: 1rem;
+	}
+
+	.settings {
+		max-height: none;
+		overflow-y: visible;
+	}
+
+	#viewerBox {
+		height: 100%;
+		min-height: 35rem;
+	}
+
+	#canvas {
+		touch-action: none;
+		display: block;
+		width: 100%;
+		flex: 1;
+		min-height: 30dvh;
+		border-radius: 0.5rem;
+		background: #111318;
+		border: 1px solid #30343c;
+	}
+}
+
+
+/* ==============================
+   Small mobile
+   ============================== */
+
+@media (max-width: 40rem) {
+	.settings {
+		grid-template-columns: 1fr;
+	}
+
+	.settings h2 {
+		margin-bottom: 0.25rem;
+	}
+
+	#sliceBox {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	#sliceBox #sliceButton {
+		width: 100%;
+	}
+
+	#sliceBox #resumeButton {
+		width: 100%;
+	}
+
+	#outputBox {
+		flex-direction: column;
+	}
+
+	#outputBox input[type="button"] {
+		width: 100%;
+	}
+}
+
+/* ==============================
+   Viewer controls
+   ============================== */
+
+#viewerControls {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: #1b1e24;
+}
+
+#viewerControls label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #cbd5e1;
+}
+
+#viewerControls .toggleControl {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+}
+
+#viewerControls .sliderControl {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    flex: 1;
+    min-width: 0;
+}
+
+#viewerControls input[type="range"] {
+    width: 100%;
+    min-width: 5rem;
+    height: 0.35rem;
+    margin: 0;
+    accent-color: #6366f1;
+    cursor: pointer;
+}
+
+#viewerControls .sliderControl span:last-child {
+    min-width: 2rem;
+    text-align: right;
+    color: #aeb7c4;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Toggle switch */
+
+#viewerControls .switch {
+    position: relative;
+    display: inline-block;
+    width: 2.5rem;
+    height: 1.35rem;
+    flex: none;
+}
+
+#viewerControls .switch input {
+    width: 0;
+    height: 0;
+    opacity: 0;
+}
+
+#viewerControls .sliderToggle {
+    position: absolute;
+    inset: 0;
+    border: 1px solid #454b55;
+    border-radius: 1rem;
+    background: #292d35;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease;
+}
+
+#viewerControls .sliderToggle::before {
+    content: "";
+    position: absolute;
+    width: 0.95rem;
+    height: 0.95rem;
+    left: 0.15rem;
+    top: 0.15rem;
+    border-radius: 50%;
+    background: #aeb7c4;
+    transition: transform 0.15s ease;
+}
+
+#viewerControls .switch input:checked + .sliderToggle {
+    background: #4f46e5;
+    border-color: #6366f1;
+}
+
+#viewerControls .switch input:checked + .sliderToggle::before {
+    transform: translateX(1.15rem);
+    background: #ffffff;
+}
+
+#viewerControls .switch input:focus-visible + .sliderToggle {
+    outline: none;
+    box-shadow: 0 0 0 0.2rem rgba(129, 140, 248, 0.15);
+}
+
+/* ==============================
+   Viewer controls mobile
+   ============================== */
+
+@media (max-width: 40rem) {
+    #viewerControls {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.875rem;
+    }
+
+    #viewerControls .toggleControl {
+        justify-content: center;
+    }
+
+    #viewerControls .sliderControl {
+        width: 100%;
+    }
+}
+
+/* ==============================
+   Disabled viewer controls
+   ============================== */
+
+#viewerControls.disabled,
+#viewerControls:has(input:disabled) {
+    opacity: 0.55;
+}
+
+#viewerControls input[type="range"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+#viewerControls .switch input:disabled + .sliderToggle {
+    background: #202329;
+    border-color: #3b4048;
+    cursor: not-allowed;
+}
+
+#viewerControls .switch input:disabled + .sliderToggle::before {
+    background: #6b7280;
+}
+
+#viewerControls input:disabled ~ .sliderToggle {
+    cursor: not-allowed;
+}
+
+#viewerControls label:has(input:disabled) {
+    color: #6b7280;
+}
+
+/* ==============================
+   Error message
+   ============================== */
+
+#errorBox {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    z-index: 99999;
+    width: min(calc(100% - 2rem), 70rem);
+    padding: 0.875rem 1rem;
+    transform: translateX(-50%);
+    background: #2a1719;
+    border: 1px solid #6b3035;
+    border-radius: 0.75rem;
+    color: #f3b4b8;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.35);
+}
+
+#errorBox strong {
+    display: block;
+    margin-bottom: 0.4rem;
+    color: #fca5a5;
+    font-size: 0.95rem;
+    font-weight: 650;
+}
+
+#errorMessage {
+    margin: 0;
+    color: #e5a5a9;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-height: 12rem;
+    overflow-y: auto;
+}
+
+#errorHint {
+    margin: 0.75rem 0 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid #5a292d;
+    color: #c98f94;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+}
+
+/* ==============================
+   Progress bar
+   ============================== */
+
+#sliceBox #sliceButton {
+    position: relative;
+    overflow: hidden;
+    --progress: 0%;
+}
+
+#sliceBox #sliceButton::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: var(--progress);
+    background: #4f46e5;
+    transition: width 0.2s ease;
+    z-index: 0;
+}
+
+#sliceBox #sliceButton::after {
+    content: attr(data-progress);
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+    color: #ffffff;
+}
+
+#sliceBox #sliceButton:disabled {
+    color: transparent;
+    background: #202329;
+}
+
+/* ==============================
+   Viewer mode select
+   ============================== */
+
+#viewerControls .viewModeControl {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+#viewerControls #viewMode {
+    min-width: 7rem;
+    padding: 0.55rem 2.25rem 0.55rem 0.75rem;
+
+    border: 1px solid #454b55;
+    border-radius: 0.45rem;
+
+    background-color: #15171c;
+    color: #f3f4f6;
+
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    outline: none;
+    cursor: pointer;
+
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
+}
+
+#viewerControls #viewMode:hover {
+    background-color: #1b1e24;
+    border-color: #5b6470;
+}
+
+#viewerControls #viewMode:focus {
+    border-color: #818cf8;
+    box-shadow:
+        0 0 0 0.2rem rgba(129, 140, 248, 0.15);
+}
+
+#viewerControls #viewMode option {
+    background: #15171c;
+    color: #f3f4f6;
+}
+
+/* Disabled */
+
+#viewerControls #viewMode:disabled {
+    background: #202329;
+    color: #6b7280;
+    border-color: #3b4048;
+    cursor: not-allowed;
+    opacity: 1;
+}
+
+/* ==============================
+   Output controls
+   ============================== */
+
+#outputBox {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+}
+
+#outputBox label {
+    flex: 0 0 auto;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    white-space: nowrap;
+}
+
+#outputBox #profile {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.65rem 2.25rem 0.65rem 0.75rem;
+    border: 1px solid #454b55;
+    border-radius: 0.45rem;
+    background: #15171c;
+    color: #f3f4f6;
+    font: inherit;
+    font-size: 0.875rem;
+    outline: none;
+    cursor: pointer;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
+}
+
+#outputBox #profile:hover {
+    background: #1b1e24;
+    border-color: #5b6470;
+}
+
+#outputBox #profile:focus {
+    border-color: #818cf8;
+    box-shadow:
+        0 0 0 0.2rem rgba(129, 140, 248, 0.15);
+}
+
+#outputBox #profile option {
+    background: #15171c;
+    color: #f3f4f6;
+}
+
+#outputBox #savePLY {
+    flex: 0 0 auto;
+    padding: 0.65rem 1rem;
+    border: 1px solid #6366f1;
+    border-radius: 0.45rem;
+    background: #4f46e5;
+    color: #ffffff;
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+}
+
+#outputBox #savePLY:hover {
+    background: #6366f1;
+    border-color: #818cf8;
+}
+
+#outputBox #savePLY:active {
+    transform: translateY(0.05rem);
+}
+
+#warning {
+    margin: 1.5rem 0.5rem;
+}
+
+/* ==============================
+   Mobile
+   ============================== */
+
+@media (max-width: 40rem) {
+    #outputBox {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #outputBox #profile,
+    #outputBox #savePLY {
+        width: 100%;
+    }
+}
