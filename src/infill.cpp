@@ -9,13 +9,14 @@ static float myMod(float a, float b) {
     return fmodf(fmodf(a, b)+b, b);
 }
 
-void Infill::generate(SDF &sdf, Type type, float depositionWidth) {
+void Infill::generate(SDF &sdf, Type type, float depositionWidth, bool geodesicPerimeter) {
     bool quiet = false;
 #ifdef __EMSCRIPTEN__
     quiet = true;
 #endif
-    Parallel::ForProgress(0, sdf.getSize(0)*sdf.getSize(1)*sdf.getSize(2), [&sdf, type, depositionWidth](size_t i) {
+    Parallel::ForProgress(0, sdf.getSize(0)*sdf.getSize(1)*sdf.getSize(2), [&sdf, type, depositionWidth, geodesicPerimeter](size_t i) {
         float wallWidth = 2.0f*depositionWidth;
+        if (geodesicPerimeter) wallWidth += depositionWidth;
         float inputSDF = sdf.getField()[i];
         float hollowSDF = fabsf(inputSDF+0.5f*wallWidth)-0.5f*wallWidth;
 

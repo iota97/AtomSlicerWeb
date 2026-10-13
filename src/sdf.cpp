@@ -66,6 +66,45 @@ float SDF::weight(Vec3 pos, size_t cellIndex) const {
     return (std::max(0.0f, cellSize - (pos-getPosition(cellIndex)).length()))/cellSize;
 }
 
+float SDF::getValTrilinear(const Vec3 &position) const {
+    Vec3 p = (position - origin) / cellSize - Vec3(0.5f);
+    int32_t x = floorf(p.x);
+    int32_t y = floorf(p.y);
+    int32_t z = floorf(p.z);
+    float tx = p.x - x;
+    float ty = p.y - y;
+    float tz = p.z - z;
+
+    if (x < 0 || y < 0 || z < 0 || x >= int32_t(size[0]) - 1 || y >= int32_t(size[1]) - 1 || z >= int32_t(size[2]) - 1) return 1e3f;
+
+    size_t i000 = idx3To1(x, y, z);
+    size_t i001 = idx3To1(x, y, z + 1);
+    size_t i010 = idx3To1(x, y + 1, z);
+    size_t i011 = idx3To1(x, y + 1, z + 1);
+    size_t i100 = idx3To1(x + 1, y, z);
+    size_t i101 = idx3To1(x + 1, y, z + 1);
+    size_t i110 = idx3To1(x + 1, y + 1, z);
+    size_t i111 = idx3To1(x + 1, y + 1, z + 1);
+
+    float v000 = field[i000];
+    float v001 = field[i001];
+    float v010 = field[i010];
+    float v011 = field[i011];
+    float v100 = field[i100];
+    float v101 = field[i101];
+    float v110 = field[i110];
+    float v111 = field[i111];
+
+    float v00 = v000 * (1.0f - tx) + v100 * tx;
+    float v01 = v001 * (1.0f - tx) + v101 * tx;
+    float v10 = v010 * (1.0f - tx) + v110 * tx;
+    float v11 = v011 * (1.0f - tx) + v111 * tx;
+    float v0 = v00 * (1.0f - ty) + v10 * ty;
+    float v1 = v01 * (1.0f - ty) + v11 * ty;
+
+    return v0 * (1.0f - tz) + v1 * tz;
+}
+
 float SDF::sdfVal(Vec3 pos, size_t cellIndex) const {
     float sdfVal = 0, wSum = 0;
     auto xyz = idx1To3(cellIndex);

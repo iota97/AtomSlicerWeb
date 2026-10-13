@@ -12,6 +12,7 @@
 #include <unordered_map>
 #include <ostream>
 #include <array>
+#include <set>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -192,3 +193,5 @@ inline std::array<uint8_t, 3> twilight(float t) {
     uint8_t b = 255 * (c0[2] + t * (c1[2] + t * (c2[2] + t * (c3[2] + t * (c4[2] + t * (c5[2] + t * c6[2]))))));
     return std::array<uint8_t, 3>{r, g, b};
 }
+
+std::set<std::array<uint32_t, 2>> getMeshBorder(const uint32_t *triangles, uint32_t trisCount);

@@ -481,7 +481,7 @@ void Machine::toolpathToGCode(const Toolpath &toolpath, const char *path, float 
             gcode << "M106 S0 ; fan off\n";
             isFanOn = false;
         } else if (!isFanOn && waypoints[i].position.z > Z_FAN_ON) {
-            gcode << "M106 S255 ; fan on\n";
+            gcode << "M106 S127 ; fan on\n";
             isFanOn = true;
         }
     }
@@ -530,7 +530,7 @@ void Machine::toolpathToGCode3Axis(const Toolpath &toolpath, const char *path, f
             gcode << "M106 S0 ; fan off\n";
             isFanOn = false;
         } else if (!isFanOn && waypoints[i].position.z > Z_FAN_ON) {
-            gcode << "M106 S255 ; fan on\n";
+            gcode << "M106 S127 ; fan on\n";
             isFanOn = true;
         }
     }

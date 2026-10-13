@@ -25,6 +25,7 @@ public:
     }
 
     Vec3 closestPoint(const Vec3 &point) const {
+        if (edge.empty()) return Vec3(std::numeric_limits<float>::quiet_NaN());
         Vec3 closest = edge[0].a;
         float minDistance2 = std::numeric_limits<float>::infinity();
 

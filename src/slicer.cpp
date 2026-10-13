@@ -17,7 +17,7 @@
 #include "web.h"
 #endif
 
-Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWidth, float layerHeight, float maxTopAngle, float maxBottomAngle, Infill::Type infillType, NormalField::Objective objective, uint32_t hardCodedField, float numberOfCover, uint32_t zigzagOffset, float nozzleConeAngle, bool upCollisionCheck, bool holeClosing, bool emScriptenWait) : layerHeight(layerHeight) {
+Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWidth, float layerHeight, float maxTopAngle, float maxBottomAngle, Infill::Type infillType, NormalField::Objective objective, uint32_t hardCodedField, float numberOfCover, uint32_t zigzagOffset, float nozzleConeAngle, bool upCollisionCheck, bool holeClosing, bool geodesicPerimeter, bool emScriptenWait) : layerHeight(layerHeight) {
     auto startTime = std::chrono::steady_clock::now();
     std::cout << "\nSDF Generation..." << std::endl;
 #ifdef __EMSCRIPTEN__
@@ -44,7 +44,7 @@ Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWi
     startTime = std::chrono::steady_clock::now();
     std::cout << "\nGenerating Infills..." << std::endl;
     SDF *originalSDF = new SDF(*sdf);
-    Infill::generate(*sdf, infillType, nozzleWidth);
+    Infill::generate(*sdf, infillType, nozzleWidth, geodesicPerimeter);
     std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count()/1000.0 << " s" << std::endl;
 
     TriPhasor *triPhasor = new TriPhasor(*sdf, *originalSDF, normals, layerHeight, maxTopAngle, maxBottomAngle, objective);
@@ -91,7 +91,7 @@ Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWi
 #ifdef __EMSCRIPTEN__
     setStatus("Generating Toolpath...");
 #endif
-    toolpath = Toolpath(layers, *originalSDF, points, normals, nozzleWidth, layerHeight, hardCodedField, zigzagOffset, holeClosing, false);
+    toolpath = Toolpath(layers, *originalSDF, points, normals, nozzleWidth, layerHeight, hardCodedField, zigzagOffset, holeClosing, geodesicPerimeter, false);
     toolpath.smoothNormals(128);
     toolpath.smoothPositions(2, *originalSDF, nozzleWidth, holeClosing);
     delete originalSDF;
@@ -103,8 +103,10 @@ void Slicer::saveToGCode(const char *path) const {
     auto startTime = std::chrono::steady_clock::now();
     std::cout << "\nGCode generation..." << std::endl;
     Toolpath toolpathCopy(toolpath);
-    toolpathCopy.tessellateNormals(1.0);
-    Machine::addPlatformAndCenter(toolpathCopy, 2.0f*layerHeight, layerHeight);
+    if (toolpathCopy.getToolpath().size()) {
+        toolpathCopy.tessellateNormals(1.0);
+        Machine::addPlatformAndCenter(toolpathCopy, 2.0f*layerHeight, layerHeight);\
+    }
     Machine::toolpathToGCode(toolpathCopy, path, 2.0f*layerHeight, layerHeight);
     std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count()/1000.0 << " s" << std::endl;
 }

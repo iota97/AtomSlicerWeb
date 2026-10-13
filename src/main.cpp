@@ -39,13 +39,14 @@ int main (int argc, char* argv[]) {
         << "[-C collision_angle] : Cone angle for nozzle collision detection [default: 95]" << std::endl
         << "[-U] : Force partitioning collision check to use upward normal, useful for 3-axis printing" << std::endl
         << "[-H] : Experimental perimeter hole closing, may cause collisions." << std::endl
+        << "[-G] : Experimental geodesic perimeter, may cause wrong toolpaths for thin features." << std::endl
         ;return 1;
     }
 
     float nozzleWidth = 0.6f, layerHeightRateo = 0.5f, topAngle = 30.0f, bottomAngle = 2.0f, numberOfCover = 4.0f, collisionAngle = 95.0f;
     uint32_t zigzagOffset = 0, hardCodedField = 0;
     const char *meshPath = argv[1], *gcode3Path = nullptr, *gcode5Path = nullptr, *plyPath = nullptr;
-    bool upCollisionCheck = false, holeClosing = false;
+    bool upCollisionCheck = false, holeClosing = false, geodesicPerimeter = false;
     Infill::Type infill = Infill::Type::Gyroid;
     NormalField::Objective objective = NormalField::Objective::ConformalTop;
     
@@ -84,6 +85,8 @@ int main (int argc, char* argv[]) {
            upCollisionCheck = true;
         } else if (!strcmp(argv[i], "-H")) {
            holeClosing = true;
+        } else if (!strcmp(argv[i], "-G")) {
+           geodesicPerimeter = true;
         }
     }
 
@@ -99,6 +102,7 @@ int main (int argc, char* argv[]) {
         if (hardCodedField) std::cout << "Hard-coded fields: Enabled" << std::endl;
         if (upCollisionCheck) std::cout << "Force partitioning collision check to use upward normal: Enabled" << std::endl;
         if (holeClosing) std::cout << "Experimental perimeter hole closing: Enabled " << std::endl;
+        if (geodesicPerimeter) std::cout << "Experimental geodesic perimeter: Enabled " << std::endl;
         if (objective == NormalField::Objective::ConformalTop) std::cout << "Number of covers: " << numberOfCover << std::endl;
         if (gcode3Path) std::cout << "3 Axis GCode: " << gcode3Path << std::endl;
         if (gcode5Path) std::cout << "5 Axis GCode: " << gcode5Path << std::endl;
@@ -110,7 +114,7 @@ int main (int argc, char* argv[]) {
     printProgress(1.0f);
     std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count()/1000.0 << " s" << std::endl;
 
-    Slicer slicer(mesh.getTriangleSoup(), nozzleWidth, layerHeightRateo*nozzleWidth, topAngle, bottomAngle, infill, objective, hardCodedField, numberOfCover, zigzagOffset, collisionAngle, upCollisionCheck, holeClosing);
+    Slicer slicer(mesh.getTriangleSoup(), nozzleWidth, layerHeightRateo*nozzleWidth, topAngle, bottomAngle, infill, objective, hardCodedField, numberOfCover, zigzagOffset, collisionAngle, upCollisionCheck, holeClosing, geodesicPerimeter);
     if (plyPath) slicer.saveToPLY(plyPath);
     if (gcode3Path) slicer.saveToGCode3Axis(gcode3Path);
     if (gcode5Path) slicer.saveToGCode(gcode5Path);

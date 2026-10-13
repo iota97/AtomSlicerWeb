@@ -17,5 +17,5 @@ enum Type {
 
 std::string infillToString(Type infill);
 
-void generate(SDF &sdf, Type type, float depositionWidth);
+void generate(SDF &sdf, Type type, float depositionWidth, bool geodesicPerimeter = false);
 };

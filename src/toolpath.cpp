@@ -5,15 +5,18 @@
 #include "curve.h"
 #include "bvhpoint.h"
 #include "bvhtriangle.h"
+#include "geodesicisolines.h"
+#include "mesherosion.h"
 #include <iomanip>
 #include <string>
 #include <sstream>
+#include <algorithm>
 
 #ifdef __EMSCRIPTEN__
 #include "web.h"
 #endif
 
-Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::vector<Vec3> &points, const std::vector<Vec3> &normals, float width, float height, uint32_t hardCodedField, uint32_t zigzagOffset, bool holeClosing, bool quiet) {
+Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::vector<Vec3> &points, const std::vector<Vec3> &normals, float width, float height, uint32_t hardCodedField, uint32_t zigzagOffset, bool holeClosing, bool geodesicPerimeter, bool quiet) {
     size_t travels = 0;
     BVHPoint bvh(points);
     Vec3 lastPoint(0);
@@ -72,27 +75,114 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             }
         }
 
-        Curve curve(layers[i].vertices.data(), layers[i].vertices.size()/3, layers[i].triangles.data(), layers[i].triangles.size()/3,
-                    width, sdf, directions.data(), Stripe::Printing, true, holeClosing, true);
-        auto cycles = curve.getCycles();
+        std::vector<std::vector<std::array<Vec3, 2>>> cycles;
+        std::vector<std::vector<Vec3>> paths;
+    
+        if (!geodesicPerimeter) {
+            Curve curve(layers[i].vertices.data(), layers[i].vertices.size()/3, layers[i].triangles.data(), layers[i].triangles.size()/3,
+                        width, sdf, directions.data(), Stripe::Printing, true, holeClosing, true);
+            cycles = curve.getCycles();
+        } else {
+            std::vector<std::array<Vec3, 2>> source;
+            auto borders = getMeshBorder(layers[i].triangles.data(), layers[i].triangles.size()/3);
+            for (auto &edge : borders) {
+                Vec3 p0(layers[i].vertices.data(), edge[0]);
+                Vec3 p1(layers[i].vertices.data(), edge[1]);
+                float threshold = 0.5f*width;
+                if (sdf.getValTrilinear(p0) > -threshold && sdf.getValTrilinear(p1) > -threshold) {
+                    source.push_back({p0, p1});
+                }
+            }
 
-        for (const auto &cycle : cycles) {
+            GeodesicIsolines isolines(layers[i].vertices.data(), layers[i].triangles.data(), layers[i].vertices.size()/3, layers[i].triangles.size()/3,
+                                    (float *)source.data(), source.size(), width, width);
+            auto geodesicLines = isolines.getLines();
+
+            paths = geodesicLines;
+            MeshErosion meshErosion(layers[i].vertices.data(), layers[i].triangles.data(), layers[i].vertices.size()/3, layers[i].triangles.size()/3, width, source);
+
+            if (meshErosion.getTris().size()) {
+                std::vector<float> vertices;
+                std::vector<uint32_t> triangles;
+                for (auto &v : meshErosion.getVertices()) {
+                    vertices.push_back(v.x); vertices.push_back(v.y); vertices.push_back(v.z);
+                }
+                for (auto &t : meshErosion.getTris()) {
+                    triangles.push_back(t[0]); triangles.push_back(t[1]); triangles.push_back(t[2]);
+                }
+
+                std::vector<Vec3> verts(layers[i].vertices.size()/3);
+                for (size_t j = 0; j < verts.size(); ++j) {
+                    verts[j] = Vec3(layers[i].vertices.data(), j);
+                }
+                BVHPoint bvh(verts);
+                std::vector<float> directionsNew(vertices.size()/3);
+                for (size_t j = 0; j < directionsNew.size(); ++j) {
+                    size_t idx = bvh.nearestPointIndex(Vec3(vertices.data(), j));
+                    directionsNew[j] = idx != size_t(-1) ? directions[idx] : 0;
+                }
+
+                Curve curve(vertices.data(), vertices.size()/3, triangles.data(), triangles.size()/3,
+                            width, sdf, directionsNew.data(), Stripe::Printing, true, holeClosing, true);
+                cycles = curve.getCycles();
+            }
+        }
+
+        size_t geodesicPathsCount = paths.size();
+        for (auto &cycle : cycles) {
+            if (cycle.size() < 2) continue;
+            std::vector<Vec3> path;
+            for (auto &verts : cycle) {
+                path.push_back(verts[0]);
+            }
+            if (geodesicPerimeter) path.push_back(cycle[0][0]);
+            paths.push_back(path);
+        }
+
+        size_t cycleIdx = 0;
+        for (auto &cycle : paths) {
             if (cycle.size() < 2) continue;
             if (toolpath.size()) lastPoint = toolpath.back().position;
+
+            if (geodesicPerimeter) {
+                Vec3 c = 0.5f*sdf.getCellSize()*Vec3(sdf.getSize(0), sdf.getSize(1), 0);
+                Vec3 a = Vec3(cycle[0].x, cycle[0].y, 0) - c;
+                Vec3 b = Vec3(cycle[1].x, cycle[1].y, 0) - c;
+                if (a.cross(b).z < 0) {
+                    std::reverse(cycle.begin(), cycle.end());
+                }
+            }
+
             size_t closestIdx = 0;
             float closestDist2 = std::numeric_limits<float>::infinity();
             for (size_t j = 0; j < cycle.size(); ++j) {
-                float dist2 = (cycle[j][0]-lastPoint).length2();
+                float dist2 = (cycle[j]-lastPoint).length2();
                 if (dist2 < closestDist2) {
                     closestDist2 = dist2;
                     closestIdx = j;
                 }
             }
 
+            if (geodesicPerimeter) {
+                if (cycle[0] != cycle.back()) {
+                    closestIdx = 0;
+                } else if (cycleIdx < geodesicPathsCount && sdf.getValTrilinear(cycle[0]) > -width) {
+                    float maxAngle = 32.0f;
+                    closestIdx = 0;
+                    for (size_t j = 1; j < cycle.size()-1; ++j) {
+                        float angle = (cycle[j]-cycle[j-1]).normalize().dot((cycle[j+1]-cycle[j]).normalize());
+                        if (angle < maxAngle) {
+                            maxAngle = angle;
+                            closestIdx = j;
+                        }
+                    }
+                }
+            }
+
             if (toolpath.size() && sqrt(closestDist2) > 2.0f*width) {
                 Vec3 pos0 =  toolpath.back().position;
                 Vec3 norm0 = toolpath.back().normal;
-                Vec3 pos1 = cycle[closestIdx][0];
+                Vec3 pos1 = cycle[closestIdx];
                 Vec3 norm1 = normals[bvh.nearestPointIndex(pos1)];
                 float z = std::max(maxZ, pos1.z) + 4.0*width;
                 pos0 += ((z-pos0.z)/fabsf(norm0.z))*norm0;
@@ -112,13 +202,16 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
                 travels++;
             }
 
-            for (size_t j = 0; j < cycle.size(); ++j) {
+            size_t extra = geodesicPerimeter && cycle[0] == cycle.back();
+            for (size_t j = 0; j < cycle.size() + extra; ++j) {
                 size_t idx = (closestIdx + j) % cycle.size();
-                Vec3 pos = cycle[idx][0];
-                Vec3 norm = normals[bvh.nearestPointIndex(cycle[idx][0])];
+                Vec3 pos = cycle[idx];
+                if (toolpath.size() && pos == toolpath.back().position) continue;
+                Vec3 norm = normals[bvh.nearestPointIndex(cycle[idx])];
                 maxZ = std::max(maxZ, pos.z);
                 toolpath.push_back({pos+0.5*height*norm, norm, j > 0});
             }
+            cycleIdx++;
         }
     }
     if (toolpath.size()) {

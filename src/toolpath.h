@@ -19,7 +19,7 @@ public:
         std::vector<uint32_t> triangles;
     };
 
-    Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::vector<Vec3> &points, const std::vector<Vec3> &normals, float width, float height, uint32_t hardCodedField = 0, uint32_t zigzagOffset = 0, bool holeClosing = false, bool quiet = false);
+    Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::vector<Vec3> &points, const std::vector<Vec3> &normals, float width, float height, uint32_t hardCodedField = 0, uint32_t zigzagOffset = 0, bool holeClosing = false, bool geodesicPerimeter = false, bool quiet = false);
     Toolpath() {}
 
     void smoothNormals(size_t iterations);

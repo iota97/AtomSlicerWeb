@@ -21,6 +21,7 @@ public:
     Vec3 getPosition(size_t i) const;
     size_t getIndex(const Vec3 &position) const;
     float getVal(const Vec3 &position) const;
+    float getValTrilinear(const Vec3 &position) const;
     Vec3 getGrad(const Vec3 &position) const;
     float getCurvature(const Vec3 &position) const;
     Vec3 getGrad(const std::array<uint32_t, 3> &xyz) const;

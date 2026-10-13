@@ -277,7 +277,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
         }
     });
 
-    for (uint32_t iter = 0; iter < 32; ++iter) {
+    for (uint32_t iter = 0; iter < 4; ++iter) {
         auto found = Parallel::ForAny2(0, vertsCount, [this, iter, test](size_t i) {
             if (!mask[i]) {
                 bool change = false;
@@ -330,8 +330,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
     }
 
     uint32_t startId = Parallel::ArgMin(0, vertsCount, [this, test](size_t i) {
-        float bias = sdf->getCurvature(Vec3(position.data(), i)) > 0.1 ? 0.0 : 1e4;
-        return test(scalars[i]) ? distances[i][0][0] + distances[i][1][0] + bias : std::numeric_limits<float>::infinity();
+        return test(scalars[i]) ? distances[i][0][0] + distances[i][1][0] : std::numeric_limits<float>::infinity();
     });
 
     uint32_t curr = startId;

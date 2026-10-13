@@ -565,7 +565,7 @@ void toolpathToGCodeProfile(const char *path, const char *profile) {
             if (!params.relativeExtrusion) {
                 e = totalE;
             }
-            gcode << "G1 E" << std::setprecision(2) << e << " F" << std::setprecision(0) << params.retractSpeed << "\n";
+            gcode << "G1 E" << std::setprecision(8) << e << " F" << std::setprecision(0) << params.retractSpeed << "\n";
             needPrime = false;
         } else if (i > 0 && !needPrime && !waypoints[i].deposition) {
             size_t j = i;
@@ -578,7 +578,7 @@ void toolpathToGCodeProfile(const char *path, const char *profile) {
                     if (!params.relativeExtrusion) {
                         e = totalE;
                     }
-                    gcode << "G1 E" << std::setprecision(2) << e << " F" << std::setprecision(0) << params.retractSpeed << "\n";
+                    gcode << "G1 E" << std::setprecision(8) << e << " F" << std::setprecision(0) << params.retractSpeed << "\n";
                     needPrime = true;
                     break;
                 }
@@ -670,7 +670,7 @@ extern "C" {
     }
  
 	void slice(char *fileName, float nozzleWidth, float topAngle, float bottomAngle, float numberOfCover, float collisionAngle,
-               uint32_t zigzagOffset, bool upCollisionCheck, bool holeClosing, int infillType, int optimizeObjective, bool emscriptenWait) {
+               uint32_t zigzagOffset, bool upCollisionCheck, bool geodesicPerimeter, int infillType, int optimizeObjective, bool emscriptenWait) {
         if (uiState == UI_STATE::Slicing) return;
         setUIState(UI_STATE::Slicing);
 		auto startTimeTotal = std::chrono::steady_clock::now();
@@ -692,10 +692,11 @@ extern "C" {
 		Infill::Type infill = Infill::Type(infillType);
 		NormalField::Objective objective = NormalField::Objective(optimizeObjective);
         s_nozzleWidth = nozzleWidth;
+        bool holeClosing = !geodesicPerimeter;
 
 		std::thread thread([=]() {
 			delete slicer;
-			slicer = new Slicer(mesh->getTriangleSoup(), nozzleWidth, layerHeightRateo*nozzleWidth, topAngle, bottomAngle, infill, objective, hardCodedField, numberOfCover, zigzagOffset, collisionAngle, upCollisionCheck, holeClosing, emscriptenWait);
+			slicer = new Slicer(mesh->getTriangleSoup(), nozzleWidth, layerHeightRateo*nozzleWidth, topAngle, bottomAngle, infill, objective, hardCodedField, numberOfCover, zigzagOffset, collisionAngle, upCollisionCheck, holeClosing, geodesicPerimeter, emscriptenWait);
 			float time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTimeTotal).count()/1000.0;
             std::cout << "\nTotal time: " << time - s_idleTime << " s" << std::endl;
             setStatus(std::string("Slicing Completed in ") + std::to_string(int(time-s_idleTime)) + std::string(" Seconds."));

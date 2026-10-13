@@ -279,9 +279,10 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
         if (startPoint == size_t(-1)) {
             // Update the BVH and the locally viables
             for (auto i : layer) {
-                bvh->removePoint(i);
+                bvh->removePoint(i, false);
                 locallyViables.erase(i);
             }
+            bvh->compact();
             for (auto i : layer) {
                 for (auto j : bvh->pointsInSphereIndex(points[i], 2.0f*layerHeight + 1e-3)) {
                     if (!locallyViables.count(j) && isNotLocallyBlocked(j)) {

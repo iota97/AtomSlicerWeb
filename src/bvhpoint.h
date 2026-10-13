@@ -16,11 +16,11 @@ public:
         build();
     }
 
-    void removePoint(size_t idx) {
+    void removePoint(size_t idx, bool mayRebuild = true) {
         if (removedPoints.count(idx)) return;
         removedPoints.insert(idx);
         removedSinceBuild++;
-        if (float(removedSinceBuild)/(pointsID.size()-removedPoints.size()+removedSinceBuild) > MIN_OCCUPANCY) {
+        if (mayRebuild && float(removedSinceBuild)/(pointsID.size()-removedPoints.size()+removedSinceBuild) > MIN_OCCUPANCY) {
             build();
         }
     }
@@ -133,6 +133,19 @@ public:
             }
         }
         return index;
+    }
+
+    void compact() {
+        size_t idx = 0;
+        for (size_t i = 0; i < pointsID.size(); ++i) {
+            size_t pointIdx = pointsID[i];
+            if (removedPoints.count(pointIdx)) {
+                continue;
+            }
+            pointsID[idx++] = pointIdx;
+        }
+        pointsID.resize(idx);
+        build();
     }
 
     void getAABB(Vec3 &minAABB, Vec3 &maxAABB) const {

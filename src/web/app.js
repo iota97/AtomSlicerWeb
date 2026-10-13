@@ -54,12 +54,12 @@ function slice() {
 	const collisionAngle = parseFloat(document.getElementById('collisionAngle').value);
 	const zigzagOffset = parseInt(document.getElementById('zigzagOffset').value, 10);
 	const upCollisionCheck = document.getElementById('upCollisionCheck').checked;
-	const holeClosing = document.getElementById('holeClosing').checked;
+	const geodesicPerimeters = document.getElementById('geodesicPerimeters').checked;
 	const infillType = parseInt(document.getElementById('infillType').value, 10);
 	const toolOrientation = parseInt(document.getElementById('toolOrientation').value, 10);
 	const layerFields = document.getElementById('layerFields').checked;
 
-	_slice(stlPath, nozzleWidth, topAngle, bottomAngle, numberOfCover, collisionAngle, zigzagOffset, upCollisionCheck, holeClosing, infillType, toolOrientation, layerFields);
+	_slice(stlPath, nozzleWidth, topAngle, bottomAngle, numberOfCover, collisionAngle, zigzagOffset, upCollisionCheck, geodesicPerimeters, infillType, toolOrientation, layerFields);
 }
 
 function saveProfile() {

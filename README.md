@@ -6,6 +6,8 @@ Try the web version here: https://slicer.iota97.workers.dev/.
 
 ## Building
 
+### Web version
+
 The web version is built with **Emscripten 6.0.8**.
 
 ```
@@ -13,7 +15,21 @@ emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release
 cmake --build build-web
 ```
 
-## Local Development
+### Unix-like systems
+
+Run the following commands:
+
+```
+mkdir build && cd build
+cmake ..
+make -j8
+```
+
+### Windows
+
+Create a folder named `build` and run CMake as on Unix-like systems. Then, open the generated solution with Visual Studio and compile it.
+
+## Local Deployment
 
 You can also run the web server locally.
 
