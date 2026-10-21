@@ -6,10 +6,12 @@
 #include <vector>
 #include <array>
 #include "mathutils.h"
+#include "sdf.h"
 
 class MeshErosion {
 public:
     MeshErosion(const float *vertsPosition, const uint32_t *triangles, uint32_t vertsCount, uint32_t trisCount, float width, const std::vector<std::array<Vec3, 2>> &source);
+    MeshErosion(const float *vertsPosition, const uint32_t *triangles, uint32_t vertsCount, uint32_t trisCount, const SDF &sdf, const SDF &sdfOriginal, const std::vector<std::array<Vec3, 3>> &meshTriangles);
     void saveMeshToPly(const char *path);
 
     const std::vector<Vec3> &getVertices() const { return verts; }

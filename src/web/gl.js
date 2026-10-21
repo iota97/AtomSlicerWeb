@@ -13,6 +13,8 @@ Module.onRuntimeInitialized = () => {
 		option.textContent = name.replaceAll("_", " ");
 		document.getElementById("profile").appendChild(option);
 	});
+
+	document.getElementById("loadingScreen").style.display = "none";
 };
 
 Module.onAbort = (msg) => {
@@ -147,6 +149,8 @@ const vertexShaderLayerSource = `
 		vec4 world = model * vec4(position, 1.0);
 		worldPosition = world.xyz;
 		worldNormal = normalize((model * vec4(normal, 0.0)).xyz);
+		vec4 projNormal = viewProjection * vec4(worldNormal, 0.0);
+		if (projNormal.z > 0.0) worldNormal = -worldNormal;
 		gl_Position = viewProjection * world;
 		if (point >= maxPoint) {
 			gl_Position = vec4(0.0, 0.0, 0.0, 0.0);
@@ -1014,7 +1018,15 @@ function render() {
 		gl.uniform3f(lightPositionLocation, 4, 5, 6);
 		gl.uniform1f(lineMaxPointLocation, maxPoint);
 
-		gl.drawArrays(gl.TRIANGLES, 0, lineVertexCount);
+		const maxVerticesPerDraw = 60000;
+		for (let first = 0; first < lineVertexCount;) {
+			let count = Math.min(maxVerticesPerDraw, lineVertexCount - first);
+			count -= count % 3;
+			if (count === 0) break;
+			gl.drawArrays(gl.TRIANGLES, first, count);
+			first += count;
+		}
+
 		renderGizmo(gl);
 	}
 

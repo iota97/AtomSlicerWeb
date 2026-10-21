@@ -30,8 +30,8 @@ static std::vector<float> layerDirections;
 static std::vector<bool> layerFromImage;
 static UI_STATE uiState = UI_STATE::Start;
 static float s_nozzleWidth;
-static float s_waypointCount;
-static float s_layerCount;
+static uint32_t s_waypointCount;
+static uint32_t s_layerCount;
 static std::mutex s_layerMutex;
 static std::condition_variable s_layerCondition;
 static bool s_layerResumed = false;
@@ -653,7 +653,7 @@ extern "C" {
         return waypointBuffer.size() / 7;
     }
 
-    float getWaypointCount() {
+    uint32_t getWaypointCount() {
         return s_waypointCount;
     }
 
@@ -665,7 +665,7 @@ extern "C" {
         return layerBuffer.size() / 7;
     }
 
-    float getLayerCount() {
+    uint32_t getLayerCount() {
         return s_layerCount;
     }
  

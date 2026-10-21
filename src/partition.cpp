@@ -187,6 +187,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
     std::vector<std::unordered_set<size_t>> attemptedLayers;
     size_t added = 0;
     size_t backtracks = 0;
+    size_t loops = 0;
 
     for (size_t i = 0; i < points.size(); ++i) {
         if (isNotLocallyBlocked(i)) {
@@ -230,6 +231,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
             }
 
             if (loop) {
+                ++loops;
                 // If there is a cycle check if there is a fully accessible layer
                 std::unordered_set<size_t> starts(locallyViables);
                 std::unordered_set<size_t> layerTMP;
@@ -332,4 +334,5 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
     bvh = nullptr;
 
     if (!quiet) std::cout << "Backtracks: " << backtracks << std::endl;
+    if (!quiet) std::cout << "Loops: " << loops << std::endl;
 }

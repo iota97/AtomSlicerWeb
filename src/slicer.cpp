@@ -53,11 +53,6 @@ Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWi
     delete triPhasor;
 
     startTime = std::chrono::steady_clock::now();
-    std::cout << "\nSnapping..." << std::endl;
-    Snapper::snap(points, layerHeight, *originalSDF, triangles);
-    std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count()/1000.0 << " s" << std::endl;
-
-    startTime = std::chrono::steady_clock::now();
     std::cout << "\nPartitioning..." << std::endl;
 #ifdef __EMSCRIPTEN__
     setStatus("Partitioning Atoms...");
@@ -72,7 +67,7 @@ Slicer::Slicer(const std::vector<std::array<Vec3, 3>> &triangles, float nozzleWi
 #ifdef __EMSCRIPTEN__
     setStatus("Meshing Layers...");
 #endif
-    Meshing meshing(points, normals, partition.getLayers(), nozzleWidth, layerHeight, *sdf);
+    Meshing meshing(points, normals, partition.getLayers(), nozzleWidth, layerHeight, *sdf, *originalSDF, triangles);
     layers = meshing.getLayers();
     delete sdf;
     //partition.savePartitionToPLY("../data/test.ply");

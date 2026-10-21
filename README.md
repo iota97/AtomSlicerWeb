@@ -1,6 +1,8 @@
-# AtomSlicer
+# AtomSlicer Web
 
-**AtomSlicer Web** is an Emscripten port of [AtomSlicer](https://github.com/iota97/AtomSlicer), bringing the project to the web.
+**AtomSlicer Web** is an Emscripten port of [AtomSlicer](https://xavierchermain.github.io/publications/atom-slicer), bringing the project to the web.
+
+**Note**: This web version differs in several ways from the original SIGGRAPH implementation. For the original implementation and to reproduce the results reported in the paper, please use the [AtomSlicer repository](https://github.com/iota97/AtomSlicer). 
 
 Try the web version here: https://slicer.iota97.workers.dev/.
 
@@ -15,7 +17,9 @@ emcmake cmake -S . -B build-web -DCMAKE_BUILD_TYPE=Release
 cmake --build build-web
 ```
 
-### Unix-like systems
+### Native version
+
+#### Unix-like systems
 
 Run the following commands:
 
@@ -25,11 +29,11 @@ cmake ..
 make -j8
 ```
 
-### Windows
+#### Windows
 
 Create a folder named `build` and run CMake as on Unix-like systems. Then, open the generated solution with Visual Studio and compile it.
 
-## Local Deployment
+## Local Server Deployment
 
 You can also run the web server locally.
 

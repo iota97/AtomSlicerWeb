@@ -4,6 +4,8 @@ function showError(message) {
 
     errorMessage.textContent = message;
     errorBox.style.display = "block";
+
+    document.getElementById("loadingScreen").style.display = "none";
 }
 
 window.addEventListener("error", function (event) {

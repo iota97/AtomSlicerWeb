@@ -2,6 +2,7 @@
 // Copyright 2026 Giovanni Cocco and Inria
 
 #include "parallel.h"
+#include "mathutils.h"
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
@@ -284,4 +285,52 @@ size_t Parallel::ArgMin(size_t start, size_t stop, std::function<float(size_t)> 
     }
 
     return result.s;
+}
+
+std::vector<Vec3> Parallel::ForVectorVec3(size_t start, size_t stop, std::function<std::vector<Vec3>(size_t)> foo) {
+    auto &pool = getThreadPool();
+    size_t N = pool.threadCount();
+    size_t grain = (stop-start)/N + ((stop-start)%N ? 1 : 0);
+    std::vector<std::vector<Vec3>> vectors(N);
+
+    for (size_t t = 0; t < N; ++t) {
+        size_t begin = start+t*grain, end = std::min(start+(t+1)*grain, stop);
+        auto task = [begin, end, t, &foo, &vectors]() {
+            for (size_t i = begin; i < end; ++i) {
+                auto vector = foo(i);
+                vectors[t].insert(vectors[t].end(), vector.begin(), vector.end());
+                if (!t) {
+                    static uint8_t last = 0xff;
+                    float percentage = float(i-begin+1)/(end-begin);
+                    if (uint8_t(percentage*100.0f) != last) {
+                        last = uint8_t(percentage*100.0f);
+#ifndef __EMSCRIPTEN__
+                        char buff[64];
+                        const char* bar = "||||||||||||||||||||||||||||||||||||||||";
+                        const uint32_t barWidth = strlen(bar);
+                        uint32_t val = (uint32_t) (percentage * 100);
+                        uint32_t lpad = (uint32_t) (percentage * barWidth);
+                        uint32_t rpad = barWidth - lpad;
+                        sprintf(buff, "\r%3d%% [%.*s%*s]", val, lpad, bar, rpad, "");
+                        std::cout << buff << std::flush;
+#else 
+                        MAIN_THREAD_ASYNC_EM_ASM({setProgress($0)}, int(percentage*100.0f));
+#endif
+                    }
+                    if (percentage == 1.0f) {
+                        std::cout << std::endl;
+                        last = 0xff;
+                    }
+                }
+            }
+        };
+        pool.enqueue(task);
+    }
+    pool.sync();
+
+    std::vector<Vec3> result;
+    for (auto &v : vectors) {
+        result.insert(result.end(), v.begin(), v.end());
+    }
+    return result;
 }

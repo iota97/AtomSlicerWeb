@@ -8,7 +8,7 @@
 
 class Meshing {
 public:
-    Meshing(const std::vector<Vec3> &points, const std::vector<Vec3> &normals, const std::vector<std::vector<size_t>> &partition, float width, float height, const SDF &sdf);
+    Meshing(const std::vector<Vec3> &points, const std::vector<Vec3> &normals, const std::vector<std::vector<size_t>> &partition, float width, float height, const SDF &sdf, const SDF &sdfOriginal, const std::vector<std::array<Vec3, 3>> &triangles);
 
     const std::vector<Toolpath::Mesh> &getLayers() const { return layers; }
     void saveLayersToPLY(const char *path) const;

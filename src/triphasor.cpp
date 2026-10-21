@@ -63,7 +63,6 @@ TriPhasor::TriPhasor(const SDF &sdf, const SDF &originalSdf, const std::vector<V
 #endif
     extractAtoms(sdf, grid, layerHeight);
     std::cout << "Atoms count: " << atomPosition.size() << std::endl;
-
     std::cout << "Time: " << std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count()/1000.0 << " s" << std::endl;
 
     /*Parallel::For(0, grid.getTotalSize(), [this, &grid](size_t i) {
@@ -101,7 +100,9 @@ TriPhasor::TriPhasor(const SDF &sdf, const SDF &originalSdf, const std::vector<V
 }
 
 void TriPhasor::extractAtoms(const SDF &sdf, GridHierarchy<Data> &grid, float layerHeight) {
-    Parallel::ForProgress(0, grid.getTotalSize(), [&grid, layerHeight](size_t i) {
+    auto evalTriphasor = [&](const Vec3 &position, size_t i, const SDF &sdf, GridHierarchy<Data> &grid, float layerHeight) {
+        if (i == size_t(-1) || isOutside(grid.getData(i)->flags)) return 0.0f;
+
         Vec3 dirT = grid.getData(i)->tangent;
         Vec3 dirN = grid.getData(i)->normal;
         Vec3 dirB = dirN.cross(dirT).normalize();
@@ -109,66 +110,101 @@ void TriPhasor::extractAtoms(const SDF &sdf, GridHierarchy<Data> &grid, float la
         float phaseB = grid.getData(i)->phase[1];
         float phaseN = grid.getData(i)->phase[2];
 
-        // Store the max value in the tangent phase.
-        grid.getData(i)->phase[0] = -std::numeric_limits<float>::infinity();
-        // Store the max position in the tangent direction.
-        grid.getData(i)->tangent = Vec3(std::numeric_limits<float>::quiet_NaN());
+        float valT = cosf(2.0*M_PI/layerHeight*dirT.dot(position - grid.getPosition(i))+phaseT);
+        float valB = cosf(2.0*M_PI/layerHeight*dirB.dot(position - grid.getPosition(i))+phaseB);
+        float valN = cosf(2.0*M_PI/layerHeight*dirN.dot(position - grid.getPosition(i))+phaseN);
 
-        if (isOutside(grid.getData(i)->flags)) return;
+        return valT+valB+valN;
+    };
 
-        const uint8_t N = 8;
-        float range = cellSizeFromLayerHeight(layerHeight) * (0.5f-0.5f/N);
-        for (uint8_t x = 0; x < N; ++x) {
-            for (uint8_t y = 0; y < N; ++y) {
-                for (uint8_t z = 0; z < N; ++z) {
-                    Vec3 pos = range * Vec3(2*(float(x)/(N-1))-1, 2*(float(y)/(N-1))-1, 2*(float(z)/(N-1))-1);
-                    float valT = cosf(2.0*M_PI/layerHeight*dirT.dot(pos)+phaseT);
-                    float valB = cosf(2.0*M_PI/layerHeight*dirB.dot(pos)+phaseB);
-                    float valN = cosf(2.0*M_PI/layerHeight*dirN.dot(pos)+phaseN);
+    const uint32_t downSampleFactor = getDownSampleFactor();
+    const uint32_t downSampleFactor3 = downSampleFactor*downSampleFactor*downSampleFactor;
 
-                    if (valT+valB+valN > grid.getData(i)->phase[0]) {
-                        grid.getData(i)->phase[0] = valT+valB+valN;
-                        grid.getData(i)->tangent = grid.getPosition(i) + pos;
-                    }
-                }
-            }
-        }
-    });
+    auto getMaximaAtSubIndex = [&](size_t i, Vec3 &maxPosition, float &maxValue) {
+        size_t cellIndex = i/downSampleFactor3;
+        float offsetX = (i/downSampleFactor/downSampleFactor) % downSampleFactor;
+        float offsetY = (i/downSampleFactor) % downSampleFactor;
+        float offsetZ = i % downSampleFactor;
+        Vec3 offset = downSampleFactor > 1 ? 2.0f*(Vec3(offsetX, offsetY, offsetZ) / (downSampleFactor-1)) - 1.0f : 0.0f;
+        Vec3 subCellCenter = grid.getPosition(cellIndex) + offset * (0.5f-0.5f/downSampleFactor) * cellSizeFromLayerHeight(layerHeight);
 
-    Parallel::For(0, grid.getTotalSize(), [&grid, &sdf, layerHeight](size_t i) {
-        if (isOutside(grid.getData(i)->flags)) return;
-        if (sdf.getVal(grid.getData(i)->tangent) >= 0.15f*layerHeight) {
-            grid.getData(i)->tangent.x = std::numeric_limits<float>::quiet_NaN();
-            return;
-        }
+        float frequency = 2.0*M_PI/layerHeight;
+        Vec3 dirT = grid.getData(cellIndex)->tangent;
+        Vec3 dirN = grid.getData(cellIndex)->normal;
+        Vec3 dirB = dirN.cross(dirT).normalize();
 
-        auto xyz = grid.idx1To3(i);
+        float phaseT = grid.getData(cellIndex)->phase[0];
+        float phaseB = grid.getData(cellIndex)->phase[1];
+        float phaseN = grid.getData(cellIndex)->phase[2];
+
+        float angleT = phaseT + frequency * (subCellCenter-grid.getPosition(cellIndex)).dot(dirT);
+        angleT = atan2(sin(angleT), cos(angleT));
+
+        float angleB = phaseB + frequency * (subCellCenter-grid.getPosition(cellIndex)).dot(dirB);
+        angleB = atan2(sin(angleB), cos(angleB));
+
+        float angleN = phaseN + frequency * (subCellCenter-grid.getPosition(cellIndex)).dot(dirN);
+        angleN = atan2(sin(angleN), cos(angleN));
+
+        Vec3 localPosition(0);
+        localPosition -= angleT/frequency * dirT;
+        localPosition -= angleB/frequency * dirB;
+        localPosition -= angleN/frequency * dirN;
+        float clampBox = 0.5f*cellSizeFromLayerHeight(layerHeight)/downSampleFactor;
+
+        maxPosition = subCellCenter + localPosition.clamp(-clampBox, clampBox);
+        maxValue = evalTriphasor(maxPosition, cellIndex, sdf, grid, layerHeight);
+    };
+
+    size_t totalSubcells = grid.getTotalSize()*downSampleFactor3;
+    atomPosition = Parallel::ForVectorVec3(0, totalSubcells, [&](size_t i) {
+        std::vector<Vec3> result;
+        size_t cellIndex = i/downSampleFactor3;
+        if (isOutside(grid.getData(cellIndex)->flags)) return result;
+        Vec3 maxPos; float maxVal;
+        getMaximaAtSubIndex(i, maxPos, maxVal);
+        float sdfValue = sdf.getValTrilinear(maxPos);
+        if (sdfValue >= layerHeight) return result;
+        if (sdfValue >= 0.15f*layerHeight && fabsf(sdf.getGrad(maxPos).dot(grid.getData(cellIndex)->normal)) > cos(15/180.0*M_PI)) return result;
+
+        auto size = grid.getSize();
+        size[0] *= downSampleFactor; size[1] *= downSampleFactor; size[2] *= downSampleFactor;
+        auto xyz = grid.idx1To3(cellIndex);
+        uint32_t offsetX = (i/downSampleFactor/downSampleFactor) % downSampleFactor;
+        uint32_t offsetY = (i/downSampleFactor) % downSampleFactor;
+        uint32_t offsetZ = i % downSampleFactor;
+        xyz[0] = xyz[0]*downSampleFactor + offsetX;
+        xyz[1] = xyz[1]*downSampleFactor + offsetY;
+        xyz[2] = xyz[2]*downSampleFactor + offsetZ;
         uint32_t minX = xyz[0] > 0 ? xyz[0]-1 : xyz[0];
-        uint32_t maxX = xyz[0] < grid.getSize()[0]-1 ? xyz[0]+1 : xyz[0];
+        uint32_t maxX = xyz[0] < size[0]-1 ? xyz[0]+1 : xyz[0];
         uint32_t minY = xyz[1] > 0 ? xyz[1]-1 : xyz[1];
-        uint32_t maxY = xyz[1] < grid.getSize()[1]-1 ? xyz[1]+1 : xyz[1];
+        uint32_t maxY = xyz[1] < size[1]-1 ? xyz[1]+1 : xyz[1];
         uint32_t minZ = xyz[2] > 0 ? xyz[2]-1 : xyz[2];
-        uint32_t maxZ = xyz[2] < grid.getSize()[2]-1 ? xyz[2]+1 : xyz[2];
+        uint32_t maxZ = xyz[2] < size[2]-1 ? xyz[2]+1 : xyz[2];
 
+        Vec3 maxPosN; float maxValN;
         for (uint32_t x = minX; x <= maxX; ++x) {
             for (uint32_t y = minY; y <= maxY; ++y) {
                 for (uint32_t z = minZ; z <= maxZ; ++z) {
-                    size_t j = grid.idx3To1({ x, y, z });
-                    if (grid.getData(i)->phase[0] < grid.getData(j)->phase[0] || (grid.getData(i)->phase[0] == grid.getData(j)->phase[0] && j < i)) {
-                        grid.getData(i)->tangent.x = std::numeric_limits<float>::quiet_NaN();
-                        return;
+                    size_t j = grid.idx3To1({ x/downSampleFactor, y/downSampleFactor, z/downSampleFactor }) * downSampleFactor3;
+                    j += (x % downSampleFactor)*downSampleFactor*downSampleFactor + (y % downSampleFactor)*downSampleFactor + (z % downSampleFactor);
+
+                    getMaximaAtSubIndex(j, maxPosN, maxValN);
+                    if (maxVal < maxValN || (maxVal == maxValN && j < i)) {
+                        return result;
                     }
                 }
             }
         }
+
+        result.push_back(maxPos);
+        return result;
     });
 
-    const size_t total = grid.getTotalSize();
-    for (size_t i = 0; i < total; ++i) {
-        if (!std::isnan(grid.getData(i)->tangent.x)) {
-            atomPosition.push_back(grid.getData(i)->tangent);
-            atomNormal.push_back(grid.getData(i)->normal);
-        }
+    atomNormal.reserve(atomPosition.size());
+    for (auto &pos : atomPosition) {
+        atomNormal.push_back(grid.getData(grid.getIndex(pos))->normal);
     }
 }
 
@@ -290,7 +326,7 @@ void TriPhasor::initLayers(size_t i, const std::vector<float> &sdf, const std::v
 
     grid.getData(i)->normal = normals[i];
     setRegion(grid.getData(i)->flags, region);
-    setOutside(grid.getData(i)->flags, sdf[i] >= 0.5f*cellDiag);
+    setOutside(grid.getData(i)->flags, sdf[i] >= getDownSampleFactor()*cellDiag);
     if (objective == NormalField::Objective::SupportFree) {
         float angle = acosf(fabsf(grid.getData(i)->normal.dot(gradSDF(i, sdf, grid))));
         setFrozen(grid.getData(i)->flags, angle < M_PI/8 && isBoundary && curvatureSDF(i, sdf, grid) < 0.1);
@@ -319,7 +355,7 @@ void TriPhasor::initTangents(size_t i, const std::vector<float> &sdf, const std:
 
     grid.getData(i)->tangent = normals[i].cross(sdfGrad).normalize();
     setRegion(grid.getData(i)->flags, region);
-    setOutside(grid.getData(i)->flags, sdf[i] >= 0.5f*cellDiag);
+    setOutside(grid.getData(i)->flags, sdf[i] >= getDownSampleFactor()*cellDiag);
     setFrozen(grid.getData(i)->flags, getRegion(grid.getData(i)->flags) == Region::Wall && curvatureSDF(i, sdf, grid) < 0.1);
     if (objective == NormalField::Objective::SupportFree) {
         float angle = acosf(fabsf(grid.getData(i)->normal.dot(gradSDF(i, sdf, grid))));

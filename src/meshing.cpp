@@ -2,17 +2,39 @@
 // Copyright 2026 Giovanni Cocco and Inria
 
 #include "meshing.h"
+#include "mesherosion.h"
 #include "parallel.h"
 #include <fstream>
 #include <string>
 #include <deque>
 #include <algorithm>
 
-Meshing::Meshing(const std::vector<Vec3> &points, const std::vector<Vec3> &normals, const std::vector<std::vector<size_t>> &partition, float width, float height, const SDF &sdf) {
+Meshing::Meshing(const std::vector<Vec3> &points, const std::vector<Vec3> &normals, const std::vector<std::vector<size_t>> &partition, float width, float height, const SDF &sdf, const SDF &sdfOriginal, const std::vector<std::array<Vec3, 3>> &meshTriangles) {
     layers.resize(partition.size());
-    Parallel::ForProgress(0, layers.size(), [&](size_t i) {
+    Parallel::ForGrainProgress(0, layers.size(), [&](size_t i) {
         layers[i] = Meshing::mesh(partition[i], points, normals, width, height, sdf);
-    });
+
+        auto &verts = layers[i].vertices;
+        auto &tris = layers[i].triangles;
+        MeshErosion meshErosion(verts.data(), tris.data(), verts.size()/3, tris.size()/3, sdf, sdfOriginal, meshTriangles);
+
+        std::vector<float> vertices;
+        std::vector<uint32_t> triangles;
+        for (auto &v : meshErosion.getVertices()) {
+            vertices.push_back(v.x); vertices.push_back(v.y); vertices.push_back(v.z);
+        }
+        for (auto &t : meshErosion.getTris()) {
+            triangles.push_back(t[0]); triangles.push_back(t[1]); triangles.push_back(t[2]);
+        }
+
+        layers[i].vertices = std::move(vertices);
+        layers[i].triangles = std::move(triangles);
+    }, 8);
+
+    layers.erase(std::remove_if(layers.begin(), layers.end(),
+        [](const auto& layer) { return layer.triangles.size() <= 3; }),
+        layers.end()
+    );
 }
 
 void Meshing::saveLayersToPLY(const char *path) const {
@@ -51,7 +73,7 @@ Meshing::Tris Meshing::getSeedTriangle(const std::vector<Vec3> &points, const st
 
         for (const auto &c : neighboors) {
             if (c == a || c == b) continue;
-            if (sdf.getVal((points[a]+points[b]+points[c])/3.0f) > 0.2f*layerHeight) continue;
+            if (sdf.getVal((points[a]+points[b]+points[c])/3.0f) > layerHeight) continue;
 
             Vec3 v0 = points[a]-points[c], v1 = points[b]-points[c];
             if (fabsf(v0.normalize().dot(v1.normalize())) > 0.9) continue;
@@ -87,7 +109,7 @@ Meshing::Tris Meshing::getNextTriangle(const std::vector<Vec3> &points, const st
     
     for (const auto &c : neighboors) {
         if (c == edge.a || c == edge.b) continue;
-        if (sdf.getVal((points[edge.a]+points[edge.b]+points[c])/3.0f) > 0.2f*layerHeight) continue;
+        if (sdf.getVal((points[edge.a]+points[edge.b]+points[c])/3.0f) > layerHeight) continue;
 
         if (usedEdges.count(Edge(c, edge.b))) continue;
         if (usedEdges.count(Edge(edge.b, edge.a))) continue;

@@ -6,7 +6,7 @@
 		<meta name="description" content="Personal website of Giovanni Cocco">
 		<meta name="keywords" content="atomslicer, slicer, 5-axis, non planar, 3D printing, research">
 		<meta name="author" content="Giovanni Cocco">
-		<title>AtomSlicer</title>
+		<title>AtomSlicer Web</title>
 		<link rel="stylesheet" href="style.css">
 	</head>
 	<body>
@@ -14,16 +14,27 @@
 			<strong>Fatal Error!</strong>
 			<pre id="errorMessage"></pre>
 			<p id="errorHint">
-				Most errors are caused by running out of memory. Reduce the model size and try again.
+				Some errors are caused by running out of memory. Reduce the model size and try again.
 			</p>
+		</div>
+
+		<div id="loadingScreen" role="status" aria-live="polite">
+			<div class="spinner" aria-hidden="true"></div>
+			<div class="loadingText">Loading, please wait...</div>
 		</div>
 
 		<main id="mainLayout">
 			<div id="inputBox">
 				<div id="perLayerSettings" class="settings" style="display: none;">
 					<div id="titleRow">
-						<h1>AtomSlicer</h1>
+						<h1>AtomSlicer Web</h1>
 						<a href="https://xavierchermain.github.io/publications/atom-slicer" target="_blank" rel="noopener noreferrer" class="projectLink">Project Page ↗</a>
+					</div>
+			
+					<div class="disclaimer">
+    					<strong>Note:</strong> This <a href="https://github.com/iota97/AtomSlicerWeb" target="_blank" rel="noopener noreferrer">web version</a> is experimental and differs in several ways from the original SIGGRAPH implementation.
+    					For the original implementation and to reproduce the results reported in the paper, please use the
+    					<a href="https://github.com/iota97/AtomSlicer" target="_blank" rel="noopener noreferrer">AtomSlicer repository</a>.
 					</div>
 
 					<h2>Layer Settings</h2>
@@ -49,8 +60,14 @@
 
 				<div id="settings" class="settings">
 					<div id="titleRow">
-						<h1>AtomSlicer</h1>
+						<h1>AtomSlicer Web</h1>
 						<a href="https://xavierchermain.github.io/publications/atom-slicer" target="_blank" rel="noopener noreferrer" class="projectLink">Project Page ↗</a>
+					</div>
+
+					<div class="disclaimer">
+    					<strong>Note:</strong> This <a href="https://github.com/iota97/AtomSlicerWeb" target="_blank" rel="noopener noreferrer">web version</a> is experimental and differs in several ways from the original SIGGRAPH implementation.
+    					For the original implementation and to reproduce the results reported in the paper, please use the
+    					<a href="https://github.com/iota97/AtomSlicer" target="_blank" rel="noopener noreferrer">AtomSlicer repository</a>.
 					</div>
 
 					<h2>Slicer Settings</h2>
@@ -59,7 +76,7 @@
 					<input type="file" id="inputstl" accept=".stl" onchange="onNewSTL()">
 
 					<label for="nozzleWidth">Nozzle Diameter (mm)</label>
-					<input type="number" id="nozzleWidth" class="parameter" min="0" step="0.1" value="0.9">
+					<input type="number" id="nozzleWidth" class="parameter" min="0" step="0.1" value="0.6">
 
 					<label for="infillType">Infill Type</label>
 					<select id="infillType" class="parameter">

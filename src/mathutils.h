@@ -136,8 +136,12 @@ inline Vec3 triangleNormal(const Vec3 &a, const Vec3 &b, const Vec3 &c) {
     return (a-c).cross(b-c).normalize();
 }
 
+inline uint32_t getDownSampleFactor() {
+    return 3;
+}
+
 inline float cellSizeFromLayerHeight(float h) { 
-    return h*0.375f;
+    return h*0.375f * getDownSampleFactor();
 }
 
 inline void alignPhases(const Vec3 &p_i, const Vec3 &p_j, const Vec3 &d_i, const Vec3 &d_j, float f_i, float f_j, float phi_j, float &x, float &y, float w = 1.0f) {

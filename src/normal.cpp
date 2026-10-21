@@ -42,53 +42,55 @@ NormalField::NormalField(const SDF &sdf, float layerHeight, float maxTopAngle, f
             init(i, sdf.getField(), grid, layerHeight, maxTopAngle, maxBottomAngle);
         });
 
-        std::vector<uint8_t> frozenBack(grid.getTotalSize(), 1);
-        Parallel::For(0, grid.getTotalSize(), [this, &grid, &frozenBack](size_t i) {
-            auto xyz = grid.idx1To3(i);
-            uint32_t minX = xyz[0] > 0 ? xyz[0]-1 : xyz[0];
-            uint32_t maxX = xyz[0] < grid.getSize()[0]-1 ? xyz[0]+1 : xyz[0];
-            uint32_t minY = xyz[1] > 0 ? xyz[1]-1 : xyz[1];
-            uint32_t maxY = xyz[1] < grid.getSize()[1]-1 ? xyz[1]+1 : xyz[1];
-            uint32_t minZ = xyz[2] > 0 ? xyz[2]-1 : xyz[2];
-            uint32_t maxZ = xyz[2] < grid.getSize()[2]-1 ? xyz[2]+1 : xyz[2];
+        if (getDownSampleFactor() == 1) {
+            std::vector<uint8_t> frozenBack(grid.getTotalSize(), 1);
+            Parallel::For(0, grid.getTotalSize(), [this, &grid, &frozenBack](size_t i) {
+                auto xyz = grid.idx1To3(i);
+                uint32_t minX = xyz[0] > 0 ? xyz[0]-1 : xyz[0];
+                uint32_t maxX = xyz[0] < grid.getSize()[0]-1 ? xyz[0]+1 : xyz[0];
+                uint32_t minY = xyz[1] > 0 ? xyz[1]-1 : xyz[1];
+                uint32_t maxY = xyz[1] < grid.getSize()[1]-1 ? xyz[1]+1 : xyz[1];
+                uint32_t minZ = xyz[2] > 0 ? xyz[2]-1 : xyz[2];
+                uint32_t maxZ = xyz[2] < grid.getSize()[2]-1 ? xyz[2]+1 : xyz[2];
 
-            for (uint32_t x = minX; x <= maxX; ++x) {
-                for (uint32_t y = minY; y <= maxY; ++y) {
-                    for (uint32_t z = minZ; z <= maxZ; ++z) {
-                        if (x == xyz[0] && y == xyz[1] && z == xyz[2]) continue;
-                        size_t j = grid.idx3To1({x, y, z});
-                        if (!isFrozen(grid.getData(j)->flags)) {
-                            frozenBack[i] = false;
-                            return;
+                for (uint32_t x = minX; x <= maxX; ++x) {
+                    for (uint32_t y = minY; y <= maxY; ++y) {
+                        for (uint32_t z = minZ; z <= maxZ; ++z) {
+                            if (x == xyz[0] && y == xyz[1] && z == xyz[2]) continue;
+                            size_t j = grid.idx3To1({x, y, z});
+                            if (!isFrozen(grid.getData(j)->flags)) {
+                                frozenBack[i] = false;
+                                return;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
 
-        Parallel::For(0, grid.getTotalSize(), [this, &grid, &frozenBack](size_t i) {
-            auto xyz = grid.idx1To3(i);
-            uint32_t minX = xyz[0] > 0 ? xyz[0]-1 : xyz[0];
-            uint32_t maxX = xyz[0] < grid.getSize()[0]-1 ? xyz[0]+1 : xyz[0];
-            uint32_t minY = xyz[1] > 0 ? xyz[1]-1 : xyz[1];
-            uint32_t maxY = xyz[1] < grid.getSize()[1]-1 ? xyz[1]+1 : xyz[1];
-            uint32_t minZ = xyz[2] > 0 ? xyz[2]-1 : xyz[2];
-            uint32_t maxZ = xyz[2] < grid.getSize()[2]-1 ? xyz[2]+1 : xyz[2];
-            setFrozen(grid.getData(i)->flags, false);
+            Parallel::For(0, grid.getTotalSize(), [this, &grid, &frozenBack](size_t i) {
+                auto xyz = grid.idx1To3(i);
+                uint32_t minX = xyz[0] > 0 ? xyz[0]-1 : xyz[0];
+                uint32_t maxX = xyz[0] < grid.getSize()[0]-1 ? xyz[0]+1 : xyz[0];
+                uint32_t minY = xyz[1] > 0 ? xyz[1]-1 : xyz[1];
+                uint32_t maxY = xyz[1] < grid.getSize()[1]-1 ? xyz[1]+1 : xyz[1];
+                uint32_t minZ = xyz[2] > 0 ? xyz[2]-1 : xyz[2];
+                uint32_t maxZ = xyz[2] < grid.getSize()[2]-1 ? xyz[2]+1 : xyz[2];
+                setFrozen(grid.getData(i)->flags, false);
 
-            for (uint32_t x = minX; x <= maxX; ++x) {
-                for (uint32_t y = minY; y <= maxY; ++y) {
-                    for (uint32_t z = minZ; z <= maxZ; ++z) {
-                        if (x == xyz[0] && y == xyz[1] && z == xyz[2]) continue;
-                        size_t j = grid.idx3To1({x, y, z});
-                        if (frozenBack[j]) {
-                            setFrozen(grid.getData(i)->flags, true);
-                            return;
+                for (uint32_t x = minX; x <= maxX; ++x) {
+                    for (uint32_t y = minY; y <= maxY; ++y) {
+                        for (uint32_t z = minZ; z <= maxZ; ++z) {
+                            if (x == xyz[0] && y == xyz[1] && z == xyz[2]) continue;
+                            size_t j = grid.idx3To1({x, y, z});
+                            if (frozenBack[j]) {
+                                setFrozen(grid.getData(i)->flags, true);
+                                return;
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
 
         grid.smooth(smoothFrozen, 2);
 
@@ -276,7 +278,9 @@ void NormalField::smoothFrozen(size_t i, GridHierarchy<Data> *grid) {
 
 void NormalField::init(size_t i, const std::vector<float> &sdf, GridHierarchy<Data> &grid, float layerHeight, float maxTopAngle, float maxBottomAngle) {
     Vec3 grad = gradSDF(i, sdf, grid);
-    bool isBoundary = sdf[i] < layerHeight && sdf[i] > -layerHeight;
+    float cellDiag = cellSizeFromLayerHeight(layerHeight)*sqrt(3);
+    if (getDownSampleFactor() == 1) cellDiag = 2.0f*layerHeight;
+    bool isBoundary = sdf[i] < 0.5f*cellDiag && sdf[i] > -0.5f*cellDiag;
     bool isDown = grad.z < 0;
     float theta = acos(isDown ? -grad.z : grad.z)/M_PI*180.0f;
     Region region = Region::Other;
@@ -291,9 +295,8 @@ void NormalField::init(size_t i, const std::vector<float> &sdf, GridHierarchy<Da
     setRegion(grid.getData(i)->flags, region);
     grid.getData(i)->normal = grid.getPosition(i).z < 2.0*layerHeight ? Vec3(0,0,1) : grad.normalize();
     if (grid.getData(i)->normal.z < 0) grid.getData(i)->normal = -grid.getData(i)->normal;
-    setOutside(grid.getData(i)->flags, sdf[i] >= layerHeight);
-    setFrozen(grid.getData(i)->flags, ((region == Region::Top || region == Region::Bottom) || grid.getPosition(i).z < 2.0*layerHeight)
-        && sdf[i] < layerHeight && curvatureSDF(i, sdf, grid) < 0.1);
+    setOutside(grid.getData(i)->flags, sdf[i] >= getDownSampleFactor()*cellDiag);
+    setFrozen(grid.getData(i)->flags, ((region == Region::Top || region == Region::Bottom) || grid.getPosition(i).z < 2.0*layerHeight) && curvatureSDF(i, sdf, grid) < 0.1);
 }
 
 Vec3 NormalField::gradSDF(size_t i, const std::vector<float> &sdf, const GridHierarchy<Data> &grid) {
