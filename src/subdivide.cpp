@@ -3,7 +3,7 @@
 
 #include "subdivide.h"
 #include "border.h"
-#include "parallel.h"
+#include "sequential.h"
 #include <map>
 #include <array>
 #include <chrono>
@@ -16,7 +16,7 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
     triangles.resize(3*trisCount);
     scalars.resize(vertsCount);
 
-    Parallel::For(0, vertsCount, [&](uint32_t i) {
+    Sequential::For(0, vertsCount, [&](uint32_t i) {
         positions[3 * i + 0] = vertsPosition[3 * i + 0];
         positions[3 * i + 1] = vertsPosition[3 * i + 1];
         positions[3 * i + 2] = vertsPosition[3 * i + 2];
@@ -26,7 +26,7 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
         directions[3 * i + 2] = vertsDirections ? vertsDirections[3 * i + 2] : 0.0f;
     });
 
-    Parallel::For(0, trisCount, [&](uint32_t i) {
+    Sequential::For(0, trisCount, [&](uint32_t i) {
         triangles[3*i+0] = trianglesID[3*i+0];
         triangles[3*i+1] = trianglesID[3*i+1];
         triangles[3*i+2] = trianglesID[3*i+2];

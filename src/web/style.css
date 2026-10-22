@@ -1065,6 +1065,7 @@ body {
     align-items: center;
     justify-content: center;
     gap: 1.25rem;
+    height: 100dvh;
 
     background: rgba(17, 19, 24, 0.92);
     color: #e5e7eb;

@@ -23,13 +23,13 @@ Stitcher::Stitcher(const float *vertsPosition, const float *vertsNormal, const u
     mask.resize(vertsCount);
     isBorder.resize(vertsCount);
     faces.resize(3*facesCount);
-    Parallel::For(0, facesCount, [this, triangles](size_t i){
+    Sequential::For(0, facesCount, [this, triangles](size_t i){
         faces[3*i+0] = triangles[3*i+0];
         faces[3*i+1] = triangles[3*i+1];
         faces[3*i+2] = triangles[3*i+2];
     });
 
-    Parallel::For(0, vertsCount, [this, vertsPosition, vertsNormal](size_t i){
+    Sequential::For(0, vertsCount, [this, vertsPosition, vertsNormal](size_t i){
         isBorder[i] = false;
         position[3*i+0] = vertsPosition[3*i+0];
         position[3*i+1] = vertsPosition[3*i+1];
@@ -118,7 +118,7 @@ void Stitcher::floodRegion() {
 }
 
 void Stitcher::stitch(const float *vertsScalars, float period, bool holeClosing, bool showProgress) {
-    Parallel::For(0, vertsCount, [this, vertsScalars](size_t i) {
+    Sequential::For(0, vertsCount, [this, vertsScalars](size_t i) {
         scalars[i] = vertsScalars[i];
     });
     doHoleClosing = holeClosing;
@@ -149,7 +149,7 @@ void Stitcher::stitch(const float *vertsScalars, float period, bool holeClosing,
 
 void Stitcher::repulse() {
     computeRingNumber();
-    Parallel::For(0, vertsCount, [this](size_t i) {
+    Sequential::For(0, vertsCount, [this](size_t i) {
         if (!isBorder[i] && ringNumber[i] >= 4) {
             scalars[i] = scalars[i] >= 0 ? 1e3 : -1e3;
         }
@@ -215,7 +215,7 @@ uint32_t Stitcher::getRingNumber(uint32_t i) {
 }
 
 void Stitcher::computeRingNumber() {
-    Parallel::For(0, vertsCount, [this](size_t i) {
+    Sequential::For(0, vertsCount, [this](size_t i) {
         ringNumber[i] = getRingNumber(i);
     });
 }
@@ -224,7 +224,7 @@ void Stitcher::computeMask(bool positives) {
     auto test = [positives](float f) { return positives ? f < 0 : f >= 0; };
     computeRingNumber();
 
-    Parallel::For(0, vertsCount, [this, &test](size_t i) {
+    Sequential::For(0, vertsCount, [this, &test](size_t i) {
         if (!test(scalars[i]) || isBorder[i] || ringNumber[i] > 4) {
             mask[i] = 1;
             return;
@@ -255,7 +255,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
     auto test = [positives](float f) { return positives ? f < 0 : f >= 0; };
     computeMask(positives);
 
-    Parallel::For(0, vertsCount, [this, &test](size_t i) {
+    Sequential::For(0, vertsCount, [this, &test](size_t i) {
         if (test(scalars[i])) {
             distances[i][0][0] = std::numeric_limits<float>::infinity();
             distances[i][1][0] = std::numeric_limits<float>::infinity();
@@ -278,7 +278,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
     });
 
     for (uint32_t iter = 0; iter < 4; ++iter) {
-        auto found = Parallel::ForAny2(0, vertsCount, [this, iter, test](size_t i) {
+        auto found = Sequential::ForAny2(0, vertsCount, [this, iter, test](size_t i) {
             if (!mask[i]) {
                 bool change = false;
                 distances[i][0][1-iter%2] = distances[i][0][iter%2];
@@ -329,7 +329,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
         }
     }
 
-    uint32_t startId = Parallel::ArgMin(0, vertsCount, [this, test](size_t i) {
+    uint32_t startId = Sequential::ArgMin(0, vertsCount, [this, test](size_t i) {
         return test(scalars[i]) ? distances[i][0][0] + distances[i][1][0] : std::numeric_limits<float>::infinity();
     });
 
@@ -359,7 +359,7 @@ bool Stitcher::connectRegion(float period, bool positives) {
     scalars[curr] = positives ? 1.0f : -1.0f;
     uint32_t farID = prevID[curr][0][0];
 
-    Parallel::For(0, vertsCount, [this, farID, closeID](size_t i) {
+    Sequential::For(0, vertsCount, [this, farID, closeID](size_t i) {
         if (regionID[i] == farID) {
             regionID[i] = closeID;
         }
@@ -531,7 +531,7 @@ void Stitcher::generateAdjacency() {
 
     Edge **adjMatrixP = new Edge *[vertsCount+1];
     Edge *edgesP = new Edge[edgesCount];
-    Parallel::For(0, vertsCount, [&meshMap, edgeCountList, &adjMatrixP, &edgesP](size_t i) {
+    Sequential::For(0, vertsCount, [&meshMap, edgeCountList, &adjMatrixP, &edgesP](size_t i) {
         adjMatrixP[i] = edgesP + edgeCountList[i];
         uint32_t j = 0;
         for (auto v : meshMap[i]) {
@@ -566,7 +566,7 @@ void Stitcher::orderAdjacency() {
         return Edge();
     };
 
-    Parallel::For(0, vertsCount, [this, edgesTMP, &vertsFaces, &edgesFaces, &getEdge](uint32_t i) {
+    Sequential::For(0, vertsCount, [this, edgesTMP, &vertsFaces, &edgesFaces, &getEdge](uint32_t i) {
         uint32_t offset = adjMatrix.get()[i]-adjMatrix.get()[0];
         if (isBorder[i]) {
             for (auto n : getNeighborhood(i)) {
@@ -585,7 +585,7 @@ void Stitcher::orderAdjacency() {
         }
     });
 
-    Parallel::For(0, edgesCount, [&](uint32_t i) {
+    Sequential::For(0, edgesCount, [&](uint32_t i) {
         edges.get()[i] = edgesTMP[i];
     });
 
@@ -693,7 +693,7 @@ void Stitcher::subdivide() {
     mask.resize(vertsCount);
     isBorder.resize(vertsCount);
 
-    Parallel::For(0, vertsCount, [this](size_t i){
+    Sequential::For(0, vertsCount, [this](size_t i){
         isBorder[i] = false;
     });
 

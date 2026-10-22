@@ -7,6 +7,7 @@
 #include "bvhtriangle.h"
 #include "geodesicisolines.h"
 #include "mesherosion.h"
+#include "parallel.h"
 #include <iomanip>
 #include <string>
 #include <sstream>
@@ -29,9 +30,11 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
     }
 
     float maxZ = 0.0f;
-    for (size_t i = 0; i < layers.size(); ++i) {
-        if (!quiet) printProgress(float(i)/(layers.size()-1));
-        if (!layers[i].vertices.size() || !layers[i].triangles.size()) continue;
+    std::vector<size_t> geodesicPathsCounts(layers.size());
+    std::vector<std::vector<std::vector<Vec3>>> layerPaths(layers.size());
+
+    Parallel::ForLimitedProgress(0, layers.size(), [&](size_t i) {
+        if (!layers[i].vertices.size() || !layers[i].triangles.size()) return;
 
 #ifdef __EMSCRIPTEN__
         std::vector<float> directions = getLayerDirections(i);
@@ -128,7 +131,7 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             }
         }
 
-        size_t geodesicPathsCount = paths.size();
+        geodesicPathsCounts[i] = paths.size();
         for (auto &cycle : cycles) {
             if (cycle.size() < 2) continue;
             std::vector<Vec3> path;
@@ -138,9 +141,12 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             if (geodesicPerimeter) path.push_back(cycle[0][0]);
             paths.push_back(path);
         }
+        layerPaths[i] = std::move(paths);
+    }, 8);
 
+    for (size_t i = 0; i < layers.size(); ++i) {
         size_t cycleIdx = 0;
-        for (auto &cycle : paths) {
+        for (auto &cycle : layerPaths[i]) {
             if (cycle.size() < 2) continue;
             if (toolpath.size()) lastPoint = toolpath.back().position;
 
@@ -166,7 +172,7 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             if (geodesicPerimeter) {
                 if (cycle[0] != cycle.back()) {
                     closestIdx = 0;
-                } else if (cycleIdx < geodesicPathsCount && sdf.getValTrilinear(cycle[0]) > -width) {
+                } else if (cycleIdx < geodesicPathsCounts[i] && sdf.getValTrilinear(cycle[0]) > -width) {
                     float maxAngle = 32.0f;
                     closestIdx = 0;
                     for (size_t j = 1; j < cycle.size()-1; ++j) {

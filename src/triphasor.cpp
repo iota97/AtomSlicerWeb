@@ -165,7 +165,6 @@ void TriPhasor::extractAtoms(const SDF &sdf, GridHierarchy<Data> &grid, float la
         getMaximaAtSubIndex(i, maxPos, maxVal);
         float sdfValue = sdf.getValTrilinear(maxPos);
         if (sdfValue >= layerHeight) return result;
-        if (sdfValue >= 0.15f*layerHeight && fabsf(sdf.getGrad(maxPos).dot(grid.getData(cellIndex)->normal)) > cos(15/180.0*M_PI)) return result;
 
         auto size = grid.getSize();
         size[0] *= downSampleFactor; size[1] *= downSampleFactor; size[2] *= downSampleFactor;

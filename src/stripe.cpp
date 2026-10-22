@@ -38,7 +38,7 @@ Stripe::Stripe(const float *vertsPositions, const float *directions, const uint3
     if (mode != Mode::Extrinsic) {
         if (mode == Mode::Parallel || mode == Mode::Nearest || mode == Mode::Printing) {
             directionExtrinsic.resize(vertsCount);
-            Parallel::For(0, vertsCount, [this](size_t i) {
+            Sequential::For(0, vertsCount, [this](size_t i) {
                 directionExtrinsic[i] = Vec3(0, 0, 0);
             });
 
@@ -55,7 +55,7 @@ Stripe::Stripe(const float *vertsPositions, const float *directions, const uint3
         }
     }
 
-    Parallel::For(0, vertsCount, [this, vertsPositions, vertexData, directions, directionsExtrinsic, mode](size_t i) {
+    Sequential::For(0, vertsCount, [this, vertsPositions, vertexData, directions, directionsExtrinsic, mode](size_t i) {
         position[3*i+0] = vertsPositions[3*i+0]; position[3*i+1] = vertsPositions[3*i+1]; position[3*i+2] = vertsPositions[3*i+2];
         normal[3*+i+0] = vertexData[i].normal.x; normal[3*i+1] = vertexData[i].normal.y; normal[3*i+2] = vertexData[i].normal.z;
         borders[i] = false;
@@ -78,7 +78,7 @@ Stripe::Stripe(const float *vertsPositions, const float *directions, const uint3
         borders[edge[1]] = true;
     }
 
-    Parallel::For(0, triangleCount, [this, triangleIndices](uint32_t i) {
+    Sequential::For(0, triangleCount, [this, triangleIndices](uint32_t i) {
         triangle[3*i+0] = triangleIndices[i*3+0];
         triangle[3*i+1] = triangleIndices[i*3+1];
         triangle[3*i+2] = triangleIndices[i*3+2];
@@ -90,7 +90,7 @@ void Stripe::optimize() {
     period = 2.0f*width;
     hierarchy->optimize([this](uint32_t i, VertexData *vertexData) { init(i, vertexData); }, smooth, restrict, prolong);
     auto vertexData = hierarchy->getVertexData();
-    Parallel::For(0, vertsCount, [this, vertexData](size_t i) {
+    Sequential::For(0, vertsCount, [this, vertexData](size_t i) {
         scalars[i] = cosf(vertexData[i].phase[0]);
     });
 }
@@ -350,7 +350,7 @@ void Stripe::saveCutsToPLY(const char *path) const {
 
 std::vector<std::array<Vec3, 2>> Stripe::getDirectionField() const {
     std::vector<std::array<Vec3, 2>> directionField(vertsCount);
-    Parallel::For(0, vertsCount, [this, &directionField](uint32_t i) {
+    Sequential::For(0, vertsCount, [this, &directionField](uint32_t i) {
         directionField[i][0] = hierarchy->getVertexData()[i].position;
         directionField[i][1] = hierarchy->getVertexData()[i].normal.cross(hierarchy->getVertexData()[i].direction[0]).normalize();
     });

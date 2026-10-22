@@ -192,6 +192,50 @@ void Parallel::ForGrainProgress(size_t start, size_t stop, std::function<void(si
     pool.sync();
 }
 
+void Parallel::ForLimitedProgress(size_t start, size_t stop, std::function<void(size_t)> foo, size_t limit, bool quiet) {
+    ThreadPool pool(limit);
+    size_t grain = 1;
+    size_t N = (stop-start)/grain + ((stop-start)%grain ? 1 : 0);
+    size_t done = 0;
+    std::mutex progressMutex;
+    for (size_t t = 0; t < N; ++t) {
+        size_t begin = start+t*grain, end = std::min(start+(t+1)*grain, stop);
+        auto task = [begin, end, &foo, t, N, &done, &progressMutex, quiet]() {
+            for (size_t i = begin; i < end; ++i) {
+                foo(i);
+            }
+            if (!quiet) {
+                std::unique_lock<std::mutex> lock(progressMutex);
+                ++done;
+                static uint8_t last = 0xff;
+                float percentage = float(done)/N;
+                if (uint8_t(percentage*100.0f) != last) {
+                    last = uint8_t(percentage*100.0f);
+#ifndef __EMSCRIPTEN__
+                    char buff[64];
+                    const char* bar = "||||||||||||||||||||||||||||||||||||||||";
+                    const uint32_t barWidth = strlen(bar);
+                    uint32_t val = (uint32_t) (percentage * 100);
+                    uint32_t lpad = (uint32_t) (percentage * barWidth);
+                    uint32_t rpad = barWidth - lpad;
+                    sprintf(buff, "\r%3d%% [%.*s%*s]", val, lpad, bar, rpad, "");
+                    std::cout << buff << std::flush;
+#else 
+                    MAIN_THREAD_ASYNC_EM_ASM({setProgress($0)}, int(percentage*100.0f));
+#endif
+                }
+
+                if (percentage == 1.0f) {
+                    std::cout << std::endl;
+                    last = 0xff;
+                }
+            }
+        };
+        pool.enqueue(task);
+    }
+    pool.sync();
+}
+
 bool Parallel::ForAny(size_t start, size_t stop, std::function<bool(size_t)> foo) {
     auto &pool = getThreadPool();
     size_t N = pool.threadCount();

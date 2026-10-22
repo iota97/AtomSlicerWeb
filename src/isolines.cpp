@@ -2,7 +2,6 @@
 // Copyright 2026 Giovanni Cocco and Inria
 
 #include "isolines.h"
-#include "parallel.h"
 #include <cassert>
 #include <unordered_map>
 #include <bitset>

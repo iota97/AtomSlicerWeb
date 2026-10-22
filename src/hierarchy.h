@@ -7,7 +7,7 @@
 
 #pragma once
 #include "mathutils.h"
-#include "parallel.h"
+#include "sequential.h"
 #include <vector>
 #include <unordered_map>
 #include <algorithm>
@@ -26,7 +26,7 @@ class MeshHierarchy {
 public:
     MeshHierarchy(const float *vertsPositions, const uint32_t *triangleIndices, uint32_t vertsCount, uint32_t triangleCount) : vertsCount(vertsCount) {
         vertex = new T[vertsCount];
-        Parallel::For(0, vertsCount, [this, vertsPositions](size_t i) {
+        Sequential::For(0, vertsCount, [this, vertsPositions](size_t i) {
             vertex[i].position = Vec3(vertsPositions, i);
             vertex[i].normal = Vec3(0, 0, 0);
 
@@ -72,7 +72,7 @@ public:
             meshMap[v2][v0] += c1; meshMap[v2][v1] += c0;
         }
 
-        Parallel::For(0, vertsCount, [this](size_t i) {
+        Sequential::For(0, vertsCount, [this](size_t i) {
             vertex[i].normal = vertex[i].normal.normalize();
         });
 
@@ -86,11 +86,11 @@ public:
         adjMatrix = new Edge *[vertsCount+1];
         edges = new Edge[edgesCount];
         areas = new float[vertsCount];
-        Parallel::For(0, vertsCount, [this](size_t i) {
+        Sequential::For(0, vertsCount, [this](size_t i) {
             areas[i] = 1.0f;
         });
 
-        Parallel::For(0, vertsCount, [this, &meshMap, edgeCountList](size_t i) {
+        Sequential::For(0, vertsCount, [this, &meshMap, edgeCountList](size_t i) {
             adjMatrix[i] = edges + edgeCountList[i];
             uint32_t j = 0;
             for (auto v : meshMap[i]) {
@@ -245,11 +245,11 @@ private:
 
         EdgeScore *edgesScore = new EdgeScore[edgesCount];
         bool *collapsedFlag = new bool[vertsCount];
-        Parallel::For(0, vertsCount, [collapsedFlag](size_t i) {
+        Sequential::For(0, vertsCount, [collapsedFlag](size_t i) {
             collapsedFlag[i] = false;
         });
 
-        Parallel::For(0, vertsCount, [this, edgesScore](size_t i) {
+        Sequential::For(0, vertsCount, [this, edgesScore](size_t i) {
             for (uint32_t j = 0; j < adjMatrix[i+1] - adjMatrix[i]; ++j) {
                 uint32_t k = adjMatrix[i][j].id;
                 edgesScore[adjMatrix[i] - adjMatrix[0] + j].i = i;
@@ -283,7 +283,7 @@ private:
         coarse->toDense = new uint32_t[2*coarse->vertsCount];
         toCoarse = new uint32_t[vertsCount];
 
-        Parallel::For(0, collapasedCount, [this, edgesScore](size_t i) {
+        Sequential::For(0, collapasedCount, [this, edgesScore](size_t i) {
             float a_i = areas[edgesScore[i].i], a_j = areas[edgesScore[i].j];
             coarse->vertex[i].position = (a_i*vertex[edgesScore[i].i].position + a_j*vertex[edgesScore[i].j].position)/(a_i+a_j);
             coarse->vertex[i].normal = (a_i*vertex[edgesScore[i].i].normal + a_j*vertex[edgesScore[i].j].normal)/(a_i+a_j);
@@ -384,21 +384,21 @@ private:
     };
 
     void init(const InitFunction &initFunc) {
-        Parallel::For(0, vertsCount, [this, &initFunc](size_t i) {
+        Sequential::For(0, vertsCount, [this, &initFunc](size_t i) {
             initFunc(i, vertex);
         });
     }
 
     void smooth(const SmoothFunction &smoothFunc, uint32_t iterationCount) {
         for (uint32_t iter = 0; iter < iterationCount; ++iter) {
-            Parallel::For(0, vertsCount, [this, &smoothFunc, iter](size_t i) {
+            Sequential::For(0, vertsCount, [this, &smoothFunc, iter](size_t i) {
                 smoothFunc(i, getNeighborhood(i), vertex, iter);
             });
         }
     }
 
     void restrict(const RestrictFunction &restrictFunc) {
-        Parallel::For(0, coarse->vertsCount, [this, &restrictFunc](size_t i) {
+        Sequential::For(0, coarse->vertsCount, [this, &restrictFunc](size_t i) {
             uint32_t *s = coarse->toDense + 2*i;
             uint32_t *e = coarse->toDense + 2*i + (coarse->toDense[2*i+1] == uint32_t(-1) ? 1 : 2);
             Links link{s, e};
@@ -407,7 +407,7 @@ private:
     }
 
     void prolong(const ProlongFunction &prolongFunc) {
-        Parallel::For(0, vertsCount, [this, &prolongFunc](size_t i) {
+        Sequential::For(0, vertsCount, [this, &prolongFunc](size_t i) {
             prolongFunc(i, toCoarse[i], vertex, coarse->vertex);
         });
     }

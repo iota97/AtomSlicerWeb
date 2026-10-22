@@ -53,7 +53,7 @@ void Curve::snapCycles(const SDF &sdf, const std::vector<std::array<Vec3, 2>> &b
     if (!border.size()) return;
     BVHSegment bvh(border);
     for (auto &cycle : cycles) {
-        Parallel::For(0, cycle.size(), [this, &sdf, &cycle, &bvh](size_t i) {
+        Sequential::For(0, cycle.size(), [this, &sdf, &cycle, &bvh](size_t i) {
             Vec3 pos = cycle[i][0];
             float sdfVal = sdf.getVal(pos);
             float targetDist = width*0.5f;
