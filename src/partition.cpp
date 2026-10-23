@@ -72,10 +72,11 @@ void Partition::flood(size_t start, std::unordered_set<size_t> &layer, std::unor
 
 void Partition::getBlockers(std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked, std::unordered_set<size_t> &blocker) const {
     blocker.clear();
+    std::unordered_set<size_t> visited(blocked);
     for (auto blockedAtom : blocked) {
         size_t blockerAtom = getBlocker(blockedAtom);
         size_t attempted = 0;
-        while (!blocker.count(blockerAtom) && !blocked.count(blockerAtom) && !layer.count(blockerAtom)) {
+        while (!blocker.count(blockerAtom) && !visited.count(blockerAtom) && !layer.count(blockerAtom)) {
             size_t nextBlocker = getBlocker(blockerAtom);
             if (attempted++ > points.size()) {
                 std::cout << "\nFatal Error: bidirectional constraint! Try reducing the maximum tilting angles." << std::endl;
@@ -87,6 +88,8 @@ void Partition::getBlockers(std::unordered_set<size_t> &layer, std::unordered_se
             if (nextBlocker == size_t(-1)) {
                 blocker.insert(blockerAtom);
                 break;
+            } else {
+                visited.insert(blockerAtom);
             }
             blockerAtom = nextBlocker;
         }

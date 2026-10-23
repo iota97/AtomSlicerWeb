@@ -136,6 +136,7 @@ public:
     }
 
     void compact() {
+        if (removedSinceBuild < 8192) return;
         size_t idx = 0;
         for (size_t i = 0; i < pointsID.size(); ++i) {
             size_t pointIdx = pointsID[i];
