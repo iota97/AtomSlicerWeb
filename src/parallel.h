@@ -6,7 +6,7 @@
 #include <array>
 #include <vector>
 
-class Vec3;
+struct Vec3;
 namespace Parallel {
     void For(size_t start, size_t stop, std::function<void(size_t)> foo);
     void ForProgress(size_t start, size_t stop, std::function<void(size_t)> foo, bool quiet = false);
