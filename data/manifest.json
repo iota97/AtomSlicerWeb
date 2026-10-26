@@ -1,6 +1,6 @@
 {
-  "name": "Atomslicer",
-  "short_name": "Atomslicer",
+  "name": "AtomSlicer",
+  "short_name": "AtomSlicer",
   "start_url": "/",
   "display": "standalone",
   "description": "AtomSlicer generates field-aligned, non-planar layers and collision-free, continuous toolpaths for multi-axis fused filament fabrication.",
