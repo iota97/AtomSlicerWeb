@@ -1,3 +1,14 @@
+if ("serviceWorker" in navigator) {
+	window.addEventListener("load", async () => {
+		try {
+			const registration = await navigator.serviceWorker.register("/sw.js");
+			await registration.update();
+		} catch (error) {
+			console.warn("Service Worker update/registration failed; continuing:", error);
+		}
+	});
+}
+
 function showError(message) {
     const errorBox = document.getElementById("errorBox");
     const errorMessage = document.getElementById("errorMessage");
