@@ -12,7 +12,11 @@ self.addEventListener("install", (event) => {
 			"/files.data",
 			"/slicer.js",
 			"/slicer.wasm",
-			"/favicon.ico"
+			"/favicon.ico",
+			"/atomslicer-192.png",
+			"/atomslicer-512.png",
+			"/desktop.png",
+			"/mobile.png"
 		]);
 		await self.skipWaiting();
 	})());

@@ -31,12 +31,16 @@ IF(EMSCRIPTEN)
 	ADD_CUSTOM_TARGET(COPY_WEB_FILES ALL
 		COMMAND ${CMAKE_COMMAND} -E copy 
 		${CMAKE_CURRENT_SOURCE_DIR}/data/favicon.ico
+		${CMAKE_CURRENT_SOURCE_DIR}/data/atomslicer-192.png
+		${CMAKE_CURRENT_SOURCE_DIR}/data/atomslicer-512.png
+		${CMAKE_CURRENT_SOURCE_DIR}/data/desktop.png
+		${CMAKE_CURRENT_SOURCE_DIR}/data/mobile.png
+		${CMAKE_CURRENT_SOURCE_DIR}/data/manifest.json
 		${CMAKE_CURRENT_SOURCE_DIR}/src/web/index.html
 		${CMAKE_CURRENT_SOURCE_DIR}/src/web/app.js
 		${CMAKE_CURRENT_SOURCE_DIR}/src/web/gl.js
 		${CMAKE_CURRENT_SOURCE_DIR}/src/web/sw.js
 		${CMAKE_CURRENT_SOURCE_DIR}/src/web/style.css
-		${CMAKE_CURRENT_SOURCE_DIR}/src/web/manifest.json
 		${CMAKE_CURRENT_SOURCE_DIR}/server/public
 	)
 	ADD_DEPENDENCIES(${PROJECT_NAME} COPY_WEB_FILES)
