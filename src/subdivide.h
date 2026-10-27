@@ -8,7 +8,7 @@
 
 class Subdivide {
 public:
-    Subdivide(const float *vertsPosition, const float *scalars, const float *directions, const uint32_t *trianglesID, uint32_t vertsCount, uint32_t trisCount, float maxLength, bool quiet = true, bool cut = true);
+    Subdivide(const float *vertsPosition, const float *scalars, const uint32_t *trianglesID, uint32_t vertsCount, uint32_t trisCount, float maxLength, bool quiet = true);
     
     const float *getPositions() const {
         return positions.data();
@@ -16,10 +16,6 @@ public:
 
     const float *getScalars() const {
         return scalars.data();
-    }
-
-    const float *getDirections() const {
-        return directions.data();
     }
 
     const uint32_t *getFaces() const {
@@ -41,7 +37,6 @@ public:
 private:
     std::vector<float> positions;
     std::vector<float> scalars;
-    std::vector<float> directions;
     std::vector<uint32_t> triangles;
     std::set<std::array<uint32_t, 2>> borderEdges;
 };

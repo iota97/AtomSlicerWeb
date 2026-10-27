@@ -9,10 +9,9 @@
 #include <chrono>
 #include <iostream>
 
-Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, const float *vertsDirections, const uint32_t *trianglesID, uint32_t vertsCount, uint32_t trisCount, float maxLength, bool quiet, bool cut) {
+Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, const uint32_t *trianglesID, uint32_t vertsCount, uint32_t trisCount, float maxLength, bool quiet) {
     auto startTime = std::chrono::steady_clock::now();
     positions.resize(3*vertsCount);
-    directions.resize(3*vertsCount);
     triangles.resize(3*trisCount);
     scalars.resize(vertsCount);
 
@@ -21,9 +20,6 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
         positions[3 * i + 1] = vertsPosition[3 * i + 1];
         positions[3 * i + 2] = vertsPosition[3 * i + 2];
         scalars[i] = vertsScalars ? vertsScalars[i] : 0.0f;
-        directions[3 * i + 0] = vertsDirections ? vertsDirections[3 * i + 0] : 1.0f;
-        directions[3 * i + 1] = vertsDirections ? vertsDirections[3 * i + 1] : 0.0f;
-        directions[3 * i + 2] = vertsDirections ? vertsDirections[3 * i + 2] : 0.0f;
     });
 
     Sequential::For(0, trisCount, [&](uint32_t i) {
@@ -71,7 +67,6 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
 
         std::vector<float> newPositions(3*(vertsCount+edgesID.size()));
         std::vector<float> newScalars(vertsCount+edgesID.size());
-        std::vector<float> newDirections(3*(vertsCount+edgesID.size()));
         maxEdgeLength = 0.0f;
         for (size_t i = 0; i < trisCount; ++i) {
             uint32_t v0 = triangles[3 * i + 0], v1 = triangles[3 * i + 1], v2 = triangles[3 * i + 2];
@@ -95,16 +90,6 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
             newScalars[v01] = 0.5f * (scalars[v0] + scalars[v1]);
             newScalars[v02] = 0.5f * (scalars[v0] + scalars[v2]);
             newScalars[v12] = 0.5f * (scalars[v1] + scalars[v2]);
-
-            newDirections[3 * v0 + 0] = directions[3 * v0 + 0]; newDirections[3 * v0 + 1] = directions[3 * v0 + 1]; newDirections[3 * v0 + 2] = directions[3 * v0 + 2];
-            newDirections[3 * v1 + 0] = directions[3 * v1 + 0]; newDirections[3 * v1 + 1] = directions[3 * v1 + 1]; newDirections[3 * v1 + 2] = directions[3 * v1 + 2];
-            newDirections[3 * v2 + 0] = directions[3 * v2 + 0]; newDirections[3 * v2 + 1] = directions[3 * v2 + 1]; newDirections[3 * v2 + 2] = directions[3 * v2 + 2];
-            Vec3 d01 = (Vec3(directions.data(), v0) + Vec3(directions.data(), v1) * ((Vec3(directions.data(), v0).dot(Vec3(directions.data(), v1))) > 0 ? 1 : -1)).normalize();
-            Vec3 d02 = (Vec3(directions.data(), v0) + Vec3(directions.data(), v2) * ((Vec3(directions.data(), v0).dot(Vec3(directions.data(), v2))) > 0 ? 1 : -1)).normalize();
-            Vec3 d12 = (Vec3(directions.data(), v1) + Vec3(directions.data(), v2) * ((Vec3(directions.data(), v1).dot(Vec3(directions.data(), v2))) > 0 ? 1 : -1)).normalize();
-            newDirections[3 * v01 + 0] = d01.x; newDirections[3 * v01 + 1] = d01.y; newDirections[3 * v01 + 2] = d01.z;
-            newDirections[3 * v02 + 0] = d02.x; newDirections[3 * v02 + 1] = d02.y; newDirections[3 * v02 + 2] = d02.z;
-            newDirections[3 * v12 + 0] = d12.x; newDirections[3 * v12 + 1] = d12.y; newDirections[3 * v12 + 2] = d12.z;
 
             maxEdgeLength = std::max(maxEdgeLength, (Vec3(newPositions.data(), v0) - Vec3(newPositions.data(), v01)).length());
             maxEdgeLength = std::max(maxEdgeLength, (Vec3(newPositions.data(), v0) - Vec3(newPositions.data(), v02)).length());
@@ -147,7 +132,6 @@ Subdivide::Subdivide(const float *vertsPosition, const float *vertsScalars, cons
         triangles = std::move(newFaces);
         positions = std::move(newPositions);
         scalars = std::move(newScalars);
-        directions = std::move(newDirections);
         trisCount = triangles.size()/3;
         vertsCount = positions.size()/3;
     }

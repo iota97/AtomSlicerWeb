@@ -1,0 +1,4 @@
+tqdm==4.70.1
+thingi10k==1.5.0
+numpy==2.5.4
+numpy-stl==4.0.1

@@ -5,3 +5,11 @@ server/node_modules/
 server/public/
 data/*.gcode
 data/*.ply
+thingi10k/mesh/
+thingi10k/log/
+thingi10k/gcode/
+thingi10k/toolpath/
+thingi10k/image/
+thingi10k/failed.txt
+thingi10k/blender/*.blend1
+thingi10k/blender/script_id.py

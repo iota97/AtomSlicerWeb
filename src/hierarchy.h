@@ -9,7 +9,7 @@
 #include "mathutils.h"
 #include "sequential.h"
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include <algorithm>
 #include <fstream>
 #include <iostream>
@@ -29,10 +29,9 @@ public:
         Sequential::For(0, vertsCount, [this, vertsPositions](size_t i) {
             vertex[i].position = Vec3(vertsPositions, i);
             vertex[i].normal = Vec3(0, 0, 0);
-
         });
 
-        std::vector<std::unordered_map<uint32_t, float>> meshMap(vertsCount);
+        std::vector<std::map<uint32_t, float>> meshMap(vertsCount);
         faces = new uint32_t[3*triangleCount];
         facesCount = triangleCount;
         for (uint32_t i = 0; i < triangleCount; ++i) {
@@ -102,6 +101,9 @@ public:
         delete[] edgeCountList;
 
         coarseMesh();
+
+        delete[] areas;
+        areas = nullptr;
     }
 
     MeshHierarchy(const MeshHierarchy &) = delete;
@@ -211,6 +213,10 @@ public:
         return vertex;
     }
 
+    T *getVertexDataMut() {
+        return vertex;
+    }
+
     Edge **getAdjMatrix() const {
         return adjMatrix;
     }
@@ -231,6 +237,73 @@ public:
             count++;
         }
         return count;
+    }
+
+    uint32_t getVertsCount() const {
+        return vertsCount;
+    }
+
+    uint32_t getTrisCount() const {
+        return facesCount;
+    }
+
+
+    uint32_t *getTris() const {
+        return faces;
+    }
+
+    void orderAdjacency(const std::vector<bool> &isBorder) {
+        Edge *edgesTMP = new Edge[edgesCount];
+        std::unordered_map<uint32_t, std::vector<uint32_t>> vertsFaces;
+        std::map<std::array<uint32_t, 2>, std::vector<uint32_t>> edgesFaces;
+        for (uint32_t i = 0; i < facesCount; ++i) {
+            uint32_t v0 = faces[i*3+0], v1 = faces[i*3+1], v2 = faces[i*3+2];
+            vertsFaces[v0].push_back(i); vertsFaces[v1].push_back(i); vertsFaces[v2].push_back(i);
+            edgesFaces[{std::min(v0, v1), std::max(v0, v1)}].push_back(i);
+            edgesFaces[{std::min(v0, v2), std::max(v0, v2)}].push_back(i);
+            edgesFaces[{std::min(v1, v2), std::max(v1, v2)}].push_back(i);
+        }
+
+        auto getEdge = [&](uint32_t i, uint32_t j) {
+            for (auto n : getNeighborhood(i)) {
+                if (n.id == j) return n;
+            }
+            return Edge();
+        };
+
+        for (uint32_t i = 0; i < vertsCount; ++i) {
+            uint32_t offset = adjMatrix[i]-adjMatrix[0];
+            if (isBorder[i]) {
+                for (auto n : getNeighborhood(i)) {
+                    edgesTMP[offset++] = n;
+                }
+            } else {
+                uint32_t f = vertsFaces[i][0];
+                uint32_t v = uint32_t(-1);
+
+                while(offset != adjMatrix[i+1]-adjMatrix[0]) {
+                    if (i != faces[f*3+0] && v != faces[f*3+0]) { edgesTMP[offset++] = getEdge(i, faces[f*3+0]); v = faces[f*3+0]; }
+                    else if (i != faces[f*3+1] && v != faces[f*3+1]) { edgesTMP[offset++] = getEdge(i, faces[f*3+1]); v = faces[f*3+1]; }
+                    else if (i != faces[f*3+2] && v != faces[f*3+2]) { edgesTMP[offset++] = getEdge(i, faces[f*3+2]); v = faces[f*3+2]; }
+                    f = edgesFaces[{std::min(i, v), std::max(i, v)}][0] != f ? edgesFaces[{std::min(i, v), std::max(i, v)}][0] : edgesFaces[{std::min(i, v), std::max(i, v)}][1];
+                }
+            }
+        }
+
+        for (uint32_t i = 0; i < edgesCount; ++i) {
+            edges[i] = edgesTMP[i];
+        }
+
+        delete[] edgesTMP;
+    }
+
+    Neighborhood getNeighborhood(uint32_t i) const {
+        return Neighborhood{ adjMatrix[i], adjMatrix[i+1] };
+    };
+
+    void dropLods() {
+        delete coarse;
+        coarse = nullptr;
     }
 
 private:
@@ -378,10 +451,6 @@ private:
         }
         coarse->coarseMesh();
     }
-
-    Neighborhood getNeighborhood(uint32_t i) const {
-        return Neighborhood{ adjMatrix[i], adjMatrix[i+1] };
-    };
 
     void init(const InitFunction &initFunc) {
         Sequential::For(0, vertsCount, [this, &initFunc](size_t i) {

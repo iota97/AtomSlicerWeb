@@ -1029,8 +1029,11 @@ function render() {
 
 		renderGizmo(gl);
 	}
+}
 
-	requestAnimationFrame(render);
+function renderLoop() {
+	render();
+	requestAnimationFrame(renderLoop);
 }
 
 function getMesh() {
@@ -1120,5 +1123,4 @@ function downloadScreenShot() {
 	render();
 }
 
-
-render();
+renderLoop();

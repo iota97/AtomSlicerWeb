@@ -193,7 +193,7 @@ void Parallel::ForGrainProgress(size_t start, size_t stop, std::function<void(si
 }
 
 void Parallel::ForLimitedProgress(size_t start, size_t stop, std::function<void(size_t)> foo, size_t limit, bool quiet) {
-    ThreadPool pool(limit);
+    ThreadPool pool(std::min(size_t(std::max(std::thread::hardware_concurrency(), 1u)), limit));
     size_t grain = 1;
     size_t N = (stop-start)/grain + ((stop-start)%grain ? 1 : 0);
     size_t done = 0;

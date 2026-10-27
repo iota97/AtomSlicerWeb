@@ -78,12 +78,12 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             }
         }
 
-        std::vector<std::vector<std::array<Vec3, 2>>> cycles;
+        std::vector<std::vector<Vec3>> cycles;
         std::vector<std::vector<Vec3>> paths;
     
         if (!geodesicPerimeter) {
             Curve curve(layers[i].vertices.data(), layers[i].vertices.size()/3, layers[i].triangles.data(), layers[i].triangles.size()/3,
-                        width, sdf, directions.data(), Stripe::Printing, true, holeClosing, true);
+                        width, sdf, directions.data(), true, holeClosing, true);
             cycles = curve.getCycles();
         } else {
             std::vector<std::array<Vec3, 2>> source;
@@ -126,7 +126,7 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
                 }
 
                 Curve curve(vertices.data(), vertices.size()/3, triangles.data(), triangles.size()/3,
-                            width, sdf, directionsNew.data(), Stripe::Printing, true, holeClosing, true);
+                            width, sdf, directionsNew.data(), true, holeClosing, true);
                 cycles = curve.getCycles();
             }
         }
@@ -136,13 +136,13 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             if (cycle.size() < 2) continue;
             std::vector<Vec3> path;
             for (auto &verts : cycle) {
-                path.push_back(verts[0]);
+                path.push_back(verts);
             }
-            if (geodesicPerimeter) path.push_back(cycle[0][0]);
+            if (geodesicPerimeter) path.push_back(cycle[0]);
             paths.push_back(path);
         }
         layerPaths[i] = std::move(paths);
-    }, 8);
+    }, 16);
 
     for (size_t i = 0; i < layers.size(); ++i) {
         size_t cycleIdx = 0;

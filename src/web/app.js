@@ -13,6 +13,8 @@ if ("serviceWorker" in navigator) {
 	});
 }
 
+document.getElementById("savePLY").value = "showSaveFilePicker" in window ? "Save GCode" : "Download GCode";
+
 function showError(message) {
     const errorBox = document.getElementById("errorBox");
     const errorMessage = document.getElementById("errorMessage");
@@ -87,9 +89,21 @@ function saveProfile() {
 	_saveProfile(oPtr, pPtr);
 }
 
-function downloadFile(file) {
+async function downloadFile(file) {
 	const array = FS.readFile(file, { encoding: 'binary' });
 	const blob = new Blob([array], { type: 'application/octet-stream' });
+	if ("showSaveFilePicker" in window) {
+		try {
+			const handle = await window.showSaveFilePicker({suggestedName: file, startIn: "downloads"});
+			const writable = await handle.createWritable();
+			await writable.write(blob);
+			await writable.close();
+			return;
+		} catch (error) {
+			if (error.name === "AbortError" || error instanceof TypeError) return;
+		}
+	}
+
 	const url = window.URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;

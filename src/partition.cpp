@@ -216,6 +216,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
         }
     }
 
+    size_t seed;
     while (locallyViables.size()) {
         // Flood the layer and keep track of the non viable neighbours
         flood(startPoint, layer, blocked);
@@ -223,6 +224,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
         // Get the blockers that are not in the layer
         getBlockers(layer, blocked, blocker);
 
+        seed = startPoint;
         startPoint = size_t(-1);
         if (blocker.size()) {
             bool loop = false;
@@ -259,6 +261,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
                     // If there is, add that one
                     if (!blocker.size()) {
                         layer = std::move(layerTMP);
+                        seed = startPoint;
                         break;
                     }
 
@@ -300,7 +303,7 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
             float closestDist = std::numeric_limits<float>::infinity();
             bool found = false;
             for (auto i : locallyViables) {
-                float distance = (points[*layer.begin()]-points[i]).length2();
+                float distance = (points[seed]-points[i]).length2();
                 if (distance < closestDist) {
                     if (getBlocker(i) == size_t(-1)) {
                         closestDist = distance;

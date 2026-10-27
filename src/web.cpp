@@ -759,7 +759,7 @@ extern "C" {
 
         auto &directions = s_layerDir[i];
         const auto &positions = (*s_layerPtr)[i].vertices;
-        directions.resize((*s_layerPtr)[i].vertices.size());
+        directions.resize((*s_layerPtr)[i].vertices.size()/3);
 
         for (size_t j = 0; j < directions.size(); ++j) {
             float posX = positions[3*j+0], posY = positions[3*j+1];
