@@ -26,7 +26,7 @@ MeshErosion::MeshErosion(const float *vertsPosition, const uint32_t *triangles, 
         Vec3 closest = bvh.closestPoint(pos);
         float distance = (pos-closest).length();
         vertsScalars[i] = source.size() ? distance - width : 0.0f;
-        if (!vertsScalars[i]) vertsScalars[i] = -1e-6;
+        if (fabsf(vertsScalars[i]) < 1e-5) vertsScalars[i] = vertsScalars[i] < 0 ? -1e-5 : 1e-5;
         newVerts[i] = Vec3(vertsPosition, i);
     }
 
@@ -181,8 +181,9 @@ MeshErosion::MeshErosion(const float *vertsPosition, const uint32_t *triangles, 
                 seed = randomUintFromUint(seed);
             }
             float sign = outside > raysCount/2 ? -1 : 1;
-            vertsScalars[i] = -sign * delta.length();
-            if (!vertsScalars[i]) vertsScalars[i] = -1e-6;
+            float distance = delta.length();
+            if (distance < 1e-5) distance = 1e-5;
+            vertsScalars[i] = -sign * distance;
         }
         newVerts[i] = Vec3(vertsPosition, i);
     }

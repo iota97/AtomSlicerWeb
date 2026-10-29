@@ -62,15 +62,14 @@ Toolpath::Toolpath(const std::vector<Mesh> &layers, const SDF &sdf, const std::v
             case 3:
                 directionsFromTexture("data/images/siggraph.pgm", directions, layers[i].vertices, sdf.getModelSize());
                 break;
-            case 188:
-            case 227:
-            case 228:
+            case 186:
+            case 225:
                 directionsFromTexture("data/images/right.pgm", directions, layers[i].vertices, sdf.getModelSize());
                 break;
-            case 229:
+            case 227:
                 directionsFromTexture("data/images/front.pgm", directions, layers[i].vertices, sdf.getModelSize());
                 break;
-            case 230:
+            case 228:
                 directionsFromTexture("data/images/tiles.pgm", directions, layers[i].vertices, sdf.getModelSize());
                 break;
             default:
