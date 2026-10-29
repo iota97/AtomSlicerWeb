@@ -178,6 +178,7 @@ public:
     typedef std::function<void(uint32_t, const Neighborhood&, T *, uint32_t)> SmoothFunction;
     typedef std::function<void(uint32_t, const Links&, T *, T *)> RestrictFunction;
     typedef std::function<void(uint32_t, uint32_t, T *, T *)> ProlongFunction;
+    typedef std::function<void(MeshHierarchy &, uint32_t)> LevelSmoothFunction;
     typedef std::function<std::array<uint8_t, 3>(uint32_t, T *)> ColorFunction;
 
     void saveMeshToPLY(const char *path, ColorFunction colorFunc) const {
@@ -206,6 +207,18 @@ public:
             coarse->optimize(initFunc, smoothFunc, restrictFunc, prolongFunc, iterationCount);
             prolong(prolongFunc);
             smooth(smoothFunc, iterationCount);
+        }
+    }
+
+    void optimize(const InitFunction &initFunc, const LevelSmoothFunction &levelSmooth, const RestrictFunction &restrictFunc, const ProlongFunction &prolongFunc, uint32_t iterationCount = 64) {
+        if (!dense)
+            init(initFunc);
+
+        if (coarse) {
+            restrict(restrictFunc);
+            coarse->optimize(initFunc, levelSmooth, restrictFunc, prolongFunc, iterationCount);
+            prolong(prolongFunc);
+            levelSmooth(*this, iterationCount);
         }
     }
 

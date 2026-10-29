@@ -31,7 +31,7 @@ Stripe::Stripe(MeshHierarchy<VertexData> *hierarchy, const float *directions, co
 }
 
 void Stripe::optimize(std::vector<float> &scalars) {
-    hierarchy->optimize([this](uint32_t i, VertexData *vertexData) { init(i, vertexData); }, smooth, restrict, prolong);
+    hierarchy->optimize([this](uint32_t i, VertexData *vertexData) { init(i, vertexData); }, smoothLevel, restrict, prolong);
     auto vertexData = hierarchy->getVertexData();
     scalars.resize(hierarchy->getVertsCount());
     Sequential::For(0, hierarchy->getVertsCount(), [&](size_t i) {
@@ -181,5 +181,72 @@ void Stripe::prolongNearest(uint32_t id, uint32_t coarse_id, VertexData* vertexD
     if (d_ij + vertexDataCoarse[coarse_id].phase[0] < vertexData[id].phase[0]) {
         vertexData[id].phase[0] = d_ij + vertexDataCoarse[coarse_id].phase[0];
         vertexData[id].direction[0] = vertexDataCoarse[coarse_id].direction[0].orthonormalize(vertexData[id].normal);
+    }
+}
+
+void Stripe::smoothLevel(MeshHierarchy<VertexData> &level, uint32_t iterations) {
+    VertexData *vertexData = level.getVertexDataMut();
+    MeshHierarchy<VertexData>::Edge **adj = level.getAdjMatrix();
+    float frequency = 2.0f*float(M_PI)/s_period;
+    uint32_t vertsCount = level.getVertsCount();
+
+    struct EdgeData { float weightedCosine, weightedSine, dotSign; };
+    std::vector<EdgeData> edgeData(level.getEdgeCount());
+    for (uint32_t i = 0; i < vertsCount; ++i) {
+        if (vertexData[i].isFrozen) continue;
+        Vec3 p_i = vertexData[i].position;
+        Vec3 d_i = vertexData[i].direction[0];
+        uint32_t offset = adj[i] - adj[0];
+        for (const MeshHierarchy<VertexData>::Edge *e = adj[i]; e != adj[i+1]; ++e) {
+            uint32_t j = e->id;
+            float w = e->weight;
+            Vec3 p_j = vertexData[j].position;
+            Vec3 d_j = vertexData[j].direction[0];
+            Vec3 p_ij = (p_i+p_j)*0.5f;
+            float a = frequency * (p_ij-p_i).dot(d_i);
+            float b = frequency * (p_ij-p_j).dot(d_j);
+            float s = d_i.dot(d_j) > 0.0f ? 1.0f : -1.0f;
+            float phaseShift = s*b - a;
+            edgeData[offset++] = EdgeData{ w*cosf(phaseShift), w*sinf(phaseShift), s };
+        }
+    }
+
+    std::vector<float> cosFront(vertsCount), sinFront(vertsCount), cosBack(vertsCount), sinBack(vertsCount);
+    for (uint32_t i = 0; i < vertsCount; ++i) {
+        cosFront[i] = cosBack[i] = cosf(vertexData[i].phase[0]);
+        sinFront[i] = sinBack[i] = sinf(vertexData[i].phase[0]);
+    }
+
+    for (uint32_t it = 0; it < iterations; ++it) {
+        for (uint32_t i = 0; i < vertsCount; ++i) {
+            if (vertexData[i].isFrozen) continue;
+            float x = 0.0f, y = 0.0f;
+            uint32_t offset = adj[i] - adj[0];
+            for (const MeshHierarchy<VertexData>::Edge *e = adj[i]; e != adj[i+1]; ++e) {
+                auto &ed = edgeData[offset++];
+                float cos_j = cosFront[e->id];
+                float sin_j = sinFront[e->id];
+                float cos_angle = ed.weightedCosine*cos_j - ed.dotSign*ed.weightedSine*sin_j;
+                float sin_angle = ed.weightedSine*cos_j + ed.dotSign*ed.weightedCosine*sin_j;
+                x += cos_angle;
+                y += sin_angle;
+            }
+
+            float len2 = x*x + y*y;
+            if (len2 > std::numeric_limits<float>::epsilon()) {
+                float inv = 1.0f/sqrtf(len2);
+                cosBack[i] = x*inv;
+                sinBack[i] = y*inv;
+            } else {
+                cosBack[i] = 1.0f;
+                sinBack[i] = 0.0f;
+            }
+        }
+        std::swap(cosFront, cosBack);
+        std::swap(sinFront, sinBack);
+    }
+
+    for (uint32_t i = 0; i < vertsCount; ++i) {
+        if (!vertexData[i].isFrozen) vertexData[i].phase[0] = atan2f(sinFront[i], cosFront[i]);
     }
 }

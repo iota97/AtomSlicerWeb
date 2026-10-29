@@ -28,6 +28,7 @@ private:
     float width = 0.0f;
 
     void init(uint32_t i, VertexData *vertexData);
+    static void smoothLevel(MeshHierarchy<VertexData> &level, uint32_t iterations);
     static void smooth(uint32_t id, const MeshHierarchy<VertexData>::Neighborhood &neighborhood, VertexData *vertexData, uint32_t iteration);
     static void restrict(uint32_t id, const MeshHierarchy<VertexData>::Links &links, VertexData *vertexData, VertexData *vertexDataCoarse);
     static void prolong(uint32_t id, uint32_t coarse_id, VertexData *vertexData, VertexData *vertexDataCoarse);
