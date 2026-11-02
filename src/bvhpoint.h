@@ -8,7 +8,7 @@
 
 class BVHPoint {
 public:
-    BVHPoint(const std::vector<Vec3> &points) : points(points) {
+    BVHPoint(const std::vector<Vec3> &points) : points(points), removedFlag(points.size(), false) {
         pointsID.resize(points.size());
         for (size_t i = 0; i < pointsID.size(); ++i) {
             pointsID[i] = i;
@@ -17,10 +17,11 @@ public:
     }
 
     void removePoint(size_t idx, bool mayRebuild = true) {
-        if (removedPoints.count(idx)) return;
-        removedPoints.insert(idx);
+        if (removedFlag[idx]) return;
+        removedFlag[idx] = true;
+        removedCount++;
         removedSinceBuild++;
-        if (mayRebuild && float(removedSinceBuild)/(pointsID.size()-removedPoints.size()+removedSinceBuild) > MIN_OCCUPANCY) {
+        if (mayRebuild && float(removedSinceBuild)/(pointsID.size()-removedCount+removedSinceBuild) > MIN_OCCUPANCY) {
             build();
         }
     }
@@ -36,7 +37,7 @@ public:
                 if (nodes[idx].isLeaf()) {
                    for (size_t offset = nodes[idx].firstLeft, last = offset + nodes[idx].pointNumber; offset < last; ++offset) {
                         size_t pointIdx = pointsID[offset];
-                        if (removedPoints.count(pointIdx)) continue;
+                        if (removedFlag[pointIdx]) continue;
                         if (pointInCone(points[pointIdx], origin, direction, cosHalfAngle)) return pointIdx;
                     }
                     break;
@@ -65,7 +66,7 @@ public:
                 if (nodes[idx].isLeaf()) {
                    for (size_t offset = nodes[idx].firstLeft, last = offset + nodes[idx].pointNumber; offset < last; ++offset) {
                         size_t pointIdx = pointsID[offset];
-                        if (removedPoints.count(pointIdx)) continue;
+                        if (removedFlag[pointIdx]) continue;
                         float distance2 = (points[pointIdx]-point).length2();
                         if (distance2 < minDistance2) {
                             minDistance2 = distance2;
@@ -107,7 +108,7 @@ public:
                 if (nodes[idx].isLeaf()) {
                    for (size_t offset = nodes[idx].firstLeft, last = offset + nodes[idx].pointNumber; offset < last; ++offset) {
                         size_t pointIdx = pointsID[offset];
-                        if (removedPoints.count(pointIdx)) continue;
+                        if (removedFlag[pointIdx]) continue;
                         float distance2 = (points[pointIdx]-center).length2();
                         if (distance2 < radius2) {
                             index.push_back(pointIdx);
@@ -140,7 +141,7 @@ public:
         size_t idx = 0;
         for (size_t i = 0; i < pointsID.size(); ++i) {
             size_t pointIdx = pointsID[i];
-            if (removedPoints.count(pointIdx)) {
+            if (removedFlag[pointIdx]) {
                 continue;
             }
             pointsID[idx++] = pointIdx;
@@ -152,6 +153,10 @@ public:
     void getAABB(Vec3 &minAABB, Vec3 &maxAABB) const {
         minAABB = nodes[0].minAABB;
         maxAABB = nodes[0].maxAABB;
+    }
+
+    bool isRemoved(size_t idx) const {
+        return removedFlag[idx];
     }
 
 private:
@@ -170,8 +175,9 @@ private:
     std::vector<Node> nodes;
     std::vector<Vec3> points;
     std::vector<size_t> pointsID;
-    std::unordered_set<size_t> removedPoints;
     size_t removedSinceBuild = 0;
+    std::vector<bool> removedFlag;
+    size_t removedCount = 0;
 
     void build() {
         nodes.clear();
@@ -189,7 +195,7 @@ private:
 
         for (size_t offset = nodes.back().firstLeft, last = offset + nodes.back().pointNumber; offset < last; ++offset) {
             size_t pointIdx = pointsID[offset];
-            if (removedPoints.count(pointIdx)) continue;
+            if (removedFlag[pointIdx]) continue;
             for (uint8_t axis = 0; axis < 3; ++axis) {
                 nodes.back().minAABB[axis] = std::min(nodes.back().minAABB[axis], points[pointIdx][axis]);
                 nodes.back().maxAABB[axis] = std::max(nodes.back().maxAABB[axis], points[pointIdx][axis]);
@@ -205,7 +211,7 @@ private:
 
             size_t realPointCount = 0;
             for (size_t offset = nodes[idx].firstLeft, last = offset + nodes[idx].pointNumber; offset < last; ++offset) {
-                realPointCount += !removedPoints.count(pointsID[offset]);
+                realPointCount += !removedFlag[pointsID[offset]];
                 if (realPointCount > MAX_POINTS_PER_NODE) break;
             }
 

@@ -22,11 +22,12 @@ public:
 private:
     bool isNotLocallyBlocked(size_t i) const;
     bool isNeighboor(size_t i, size_t j) const;
-    size_t getBlocker(size_t i) const;
-    void flood(size_t start, std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked) const;
-    void getBlockers(std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked, std::unordered_set<size_t> &blocker) const;
+    size_t getBlocker(size_t i);
+    void flood(size_t start, std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked);
+    void getBlockers(std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked, std::unordered_set<size_t> &blocker);
     size_t getHigherBlocker(std::unordered_set<size_t> &blocker) const;
     void savePoints(const std::unordered_set<size_t> &layer, const std::string &path) const;
+    void buildNeighborhoods();
 
     float layerHeight;
     std::vector<std::vector<size_t>> layers;
@@ -35,4 +36,6 @@ private:
     BVHPoint *bvh;
     float nozzleConeAngle;
     bool upCollisionCheck;
+    std::vector<size_t> blockerCache;
+    std::vector<std::vector<size_t>> floodNeighbors, localBlockers, blockedBy;
 };

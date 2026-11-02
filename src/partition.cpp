@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "parallel.h"
 
 #ifdef __EMSCRIPTEN__
 #include "web.h"
@@ -23,18 +24,38 @@ void Partition::savePoints(const std::unordered_set<size_t> &layer, const std::s
 }
 
 bool Partition::isNotLocallyBlocked(size_t i) const {
-    const float cosHalfAngle = cosf(0.5f*nozzleConeAngle);
-    for (auto j : bvh->pointsInSphereIndex(points[i], 2.0f*layerHeight)) {
-        if (i == j) continue;
-        Vec3 v = points[j]-points[i];
-        float length = v.length();
-        Vec3 n = !upCollisionCheck ? normals[i] : Vec3(0, 0, 1);
-        float cosAngle = v.dot(n)/length;
-        if (length <= 2.0f*layerHeight && cosAngle >= cosHalfAngle) {
-            return false;
-        }
+    for (uint32_t j : localBlockers[i]) {
+        if (!bvh->isRemoved(j)) return false;
     }
     return true;
+}
+
+void Partition::buildNeighborhoods() {
+    float cosHalfAngle = cosf(0.5f*nozzleConeAngle);
+    float localRadius = 2.0f*layerHeight;
+    floodNeighbors.resize(points.size());
+    localBlockers.resize(points.size());
+    blockedBy.resize(points.size());
+    Parallel::For(0, points.size(), [&](size_t i) {
+        Vec3 normal = !upCollisionCheck ? normals[i] : Vec3(0, 0, 1);
+        for (size_t j : bvh->pointsInSphereIndex(points[i], localRadius)) {
+            if (j == i) continue;
+            Vec3 v = points[j]-points[i];
+            float length = v.length();
+            if (v.dot(normal)/length >= cosHalfAngle) {
+                localBlockers[i].push_back(j);
+            }
+            if (isNeighboor(i, j)) {
+               floodNeighbors[i].push_back(j);
+            }
+        }
+    });
+
+    for (size_t i = 0; i < points.size(); ++i) {
+        for (uint32_t j : localBlockers[i]) {
+            blockedBy[j].push_back(i);
+        }
+    }
 }
 
 bool Partition::isNeighboor(size_t i, size_t j) const {
@@ -42,12 +63,17 @@ bool Partition::isNeighboor(size_t i, size_t j) const {
     return fabsf(v.dot(normals[i])) < 0.5f*layerHeight && fabsf(v.dot(normals[j])) < 0.5f*layerHeight && v.length() <= 1.5f*layerHeight;
 }
 
-size_t Partition::getBlocker(size_t i) const {
+size_t Partition::getBlocker(size_t i) {
+    size_t cache = blockerCache[i];
+    if (cache == size_t(-1)) return cache;
+    if (cache != size_t(-2) && !bvh->isRemoved(cache)) return cache;
+
     Vec3 n = !upCollisionCheck ? normals[i] : Vec3(0, 0, 1);
-    return bvh->anyPointsInCone(points[i]+n*1e-3, n, nozzleConeAngle * 0.5);
+    blockerCache[i] = bvh->anyPointsInCone(points[i]+n*1e-3, n, nozzleConeAngle * 0.5);
+    return blockerCache[i];
 }
 
-void Partition::flood(size_t start, std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked) const {
+void Partition::flood(size_t start, std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked) {
     layer.clear();
     blocked.clear();
     std::vector<size_t> stack;
@@ -57,8 +83,8 @@ void Partition::flood(size_t start, std::unordered_set<size_t> &layer, std::unor
     while (stack.size()) {
         size_t i = stack.back();
         stack.pop_back();
-        for (auto j : bvh->pointsInSphereIndex(points[i], 1.5f*layerHeight)) {
-            if (!layer.count(j) && !blocked.count(j) && isNeighboor(i, j)) {
+        for (auto j : floodNeighbors[i]) {
+            if (!bvh->isRemoved(j) && !layer.count(j) && !blocked.count(j)) {
                 if (getBlocker(j) == size_t(-1)) {
                     layer.insert(j);
                     stack.push_back(j);
@@ -70,7 +96,7 @@ void Partition::flood(size_t start, std::unordered_set<size_t> &layer, std::unor
     }
 }
 
-void Partition::getBlockers(std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked, std::unordered_set<size_t> &blocker) const {
+void Partition::getBlockers(std::unordered_set<size_t> &layer, std::unordered_set<size_t> &blocked, std::unordered_set<size_t> &blocker) {
     blocker.clear();
     std::unordered_set<size_t> visited(blocked);
     for (auto blockedAtom : blocked) {
@@ -183,6 +209,8 @@ void Partition::saveLayersCSV(const char *path) const {
 
 Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &normals, float layerHeight, float nozzleConeAngle, bool upCollisionCheck, bool quiet) : layerHeight(layerHeight), points(points), normals(normals), bvh(new BVHPoint(points)), nozzleConeAngle(nozzleConeAngle/180.0f*M_PI), upCollisionCheck(upCollisionCheck) {
     if (!points.size()) return;
+    blockerCache = std::vector<size_t>(points.size(), size_t(-2));
+    buildNeighborhoods();
     std::unordered_set<size_t> layer;
     std::unordered_set<size_t> blocked;
     std::unordered_set<size_t> blocker;
@@ -292,8 +320,8 @@ Partition::Partition(const std::vector<Vec3> &points, const std::vector<Vec3> &n
             }
             bvh->compact();
             for (auto i : layer) {
-                for (auto j : bvh->pointsInSphereIndex(points[i], 2.0f*layerHeight + 1e-3)) {
-                    if (!locallyViables.count(j) && isNotLocallyBlocked(j)) {
+                for (auto j : blockedBy[i]) {
+                    if (!bvh->isRemoved(j) && !locallyViables.count(j) && isNotLocallyBlocked(j)) {
                         locallyViables.insert(j);
                     }
                 }
