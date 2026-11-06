@@ -1,4 +1,5 @@
 import bpy
+from mathutils import Vector
 bpy.context.scene.render.use_lock_interface = True
 
 pathcurve = bpy.path.abspath('//')+'../toolpath/'
@@ -14,6 +15,7 @@ try:
     bpy.ops.view3d.camera_to_view_selected()
     bpy.context.scene.camera.data.ortho_scale = bpy.context.scene.camera.data.ortho_scale * 1.1
     bpy.context.active_object.data.materials.append(bpy.data.materials["Material.001"])
+    bpy.context.scene.camera.location += bpy.context.scene.camera.matrix_world.to_3x3() @ Vector((0, 0, 100.0))
 except:
     pass
 

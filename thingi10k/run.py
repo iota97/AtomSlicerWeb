@@ -14,7 +14,7 @@ def download_dataset():
     thingi10k.init()
     mesh_count = 0
     os.makedirs('mesh', exist_ok=True)
-    for entry in tqdm(thingi10k.dataset(solid = True)):
+    for entry in tqdm(thingi10k.dataset()):
         try:
             file_path = 'mesh/'+str(entry['file_id'])+'.stl'
             if os.path.exists(file_path):
@@ -46,6 +46,21 @@ def download_dataset():
         except:
             pass
     return mesh_count
+
+def render_toolpath(id, status):
+    try:
+        with open('blender/script.py', 'r') as inscript:
+            with open('blender/script_id.py', 'w') as outscript:
+                outscript.write(f'id = "{id}"\n')
+                outscript.write(f'status = "{status}"\n')
+                for line in inscript:
+                    outscript.write(line)
+    
+        p = subprocess.run( [ blender_path, 'blender/scene.blend', '--background', '--python', 'blender/script_id.py'], timeout = 300, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return p.returncode
+
+    except:
+        return 1
 
 def run_experiment(mesh_count):
     os.makedirs('gcode', exist_ok=True)
@@ -85,21 +100,17 @@ def run_experiment(mesh_count):
                     if p.returncode == 0:
                         status = 'OK'
                     elif p.returncode == -6 or p.returncode == -9:
-                        status = 'OUT OF\nMEMORY'
+                        status = 'OUT OF\\nMEMORY'
                     else:
                         status = 'CRASH'
 
-                    with open('blender/script.py', 'r') as inscript:
-                        with open('blender/script_id.py', 'w') as outscript:
-                            outscript.write(f'id = "{f[:-4]}"\n')
-                            outscript.write(f'status = "{status}"\n')
-                            for line in inscript:
-                                outscript.write(line)
-
-                    p = subprocess.run( [ blender_path, 'blender/scene.blend', '--background', '--python', 'blender/script_id.py'], timeout = 300, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    if p.returncode != 0:
+                    if render_toolpath(f[:-4], status) != 0:
                         failed.write(f[:-4] + ' -> BLENDER\n')
                         failed.flush()
+                        status = 'RENDERING\\nFAILED'
+                        if render_toolpath(f[:-4], status) != 0:
+                            failed.write(f[:-4] + ' -> BLENDER (BAD)\n')
+                            failed.flush()
                 except:
                     pass
 
@@ -109,16 +120,8 @@ def run_experiment(mesh_count):
 
                 try:
                     status = "TIMEOUT"
-                    with open('blender/script.py', 'r') as inscript:
-                        with open('blender/script_id.py', 'w') as outscript:
-                            outscript.write(f'id = "{f[:-4]}"\n')
-                            outscript.write(f'status = "{status}"\n')
-                            for line in inscript:
-                                outscript.write(line)
-                
-                    p = subprocess.run( [ blender_path, 'blender/scene.blend', '--background', '--python', 'blender/script_id.py'], timeout = 300, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    if p.returncode != 0:
-                        failed.write(f[:-4] + ' -> BLENDER\n')
+                    if render_toolpath(f[:-4], status) != 0:
+                        failed.write(f[:-4] + ' -> BLENDER (HARD)\n')
                         failed.flush()
                 except:
                     pass
